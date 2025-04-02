@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+const argv = require('yargs').argv;
+const cli = new (require('../dist/cli.js'))(argv);
+(async function() {
+  'use strict';
+  await cli.process(argv);
+}());

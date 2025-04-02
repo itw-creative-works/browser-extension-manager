@@ -1,0 +1,86 @@
+{
+  // Basic info
+  version: '1.0.0',
+  name: '__MSG_appName__',
+  description: '__MSG_appDescription__',
+
+  // Background script
+  background: {
+    service_worker: 'assets/js/background.bundle.js',
+  },
+
+  // Permissions
+  permissions: [
+    // 'tabs',
+    // 'storage',
+    // 'activeTab',
+    // 'scripting',
+  ],
+  host_permissions: [
+    // 'http://*/*',
+    // 'https://*/*',
+  ],
+
+  // Options page
+  options_ui: {
+    page: 'pages/options.html',
+  },
+
+  // Content scripts
+  content_scripts: [
+    // {
+    //   matches: [
+    //     'http://*/*',
+    //     'https://*/*',
+    //   ],
+    //   js: [
+    //     'assets/js/content.bundle.js',
+    //   ],
+    //   css: [
+    //     'assets/css/content.bundle.css',
+    //   ],
+    //   run_at: 'document_end',
+    //   all_frames: false,
+    // },
+  ],
+
+  // Browser action
+  action: {
+    default_title: '__MSG_appName__',
+    default_popup: 'pages/popup.html',
+  },
+
+  // Content security policy
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self'; worker-src 'self';",
+  },
+
+  // Web accessible resources
+  externally_connectable: {
+    matches: [
+    ],
+  },
+
+  // Web accessible resources
+  web_accessible_resources: [
+    // {
+    //   matches: [
+    //     '<all_urls>',
+    //   ],
+    //   resources: [
+    //     'assets/styles/content.bundle.css',
+    //   ],
+    // },
+  ],
+
+  // Commands
+  commands: {
+  },
+
+  // Sandbox
+  sandbox: {
+    pages: [
+      // 'pages/sandbox.html',
+    ],
+  },
+}

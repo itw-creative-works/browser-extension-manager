@@ -1,0 +1,78 @@
+{
+  // Basic info
+  version: '1.0.0',
+  manifest_version: 3,
+  name: '__MSG_appName__',
+  description: '__MSG_appDescription__',
+
+  // Icon
+  icons: {
+    '1024': 'assets/images/icons/icon-1024x.png',
+    '512': 'assets/images/icons/icon-512x.png',
+    '256': 'assets/images/icons/icon-256x.png',
+    '128': 'assets/images/icons/icon-128x.png',
+    '48': 'assets/images/icons/icon-48x.png',
+    '32': 'assets/images/icons/icon-32x.png',
+    '16': 'assets/images/icons/icon-16x.png',
+  },
+
+  // Default locale
+  default_locale: 'en',
+
+  // Background script
+  background: {
+    service_worker: 'assets/js/background.bundle.js',
+  },
+
+  // Permissions
+  permissions: [
+  ],
+  host_permissions: [
+  ],
+
+  // Options page
+  options_ui: {
+    page: 'pages/options.html',
+  },
+
+  // Content scripts
+  content_scripts: [
+  ],
+
+  // Browser action
+  action: {
+    default_icon: {
+      '48': 'assets/images/icons/icon-48x.png',
+      '32': 'assets/images/icons/icon-32x.png',
+      '16': 'assets/images/icons/icon-16x.png',
+    },
+    default_title: '__MSG_appName__',
+    default_popup: 'pages/popup.html',
+  },
+
+  // Content security policy
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self'; worker-src 'self';",
+  },
+
+  // Web accessible resources
+  externally_connectable: {
+    matches: [
+      'http://localhost:4000/*',
+    ],
+  },
+
+  // Web accessible resources
+  web_accessible_resources: [
+  ],
+
+  // Commands
+  commands: {
+  },
+
+  // Sandbox
+  sandbox: {
+    pages: [
+    ],
+  },
+}

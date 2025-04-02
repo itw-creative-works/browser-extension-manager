@@ -1,0 +1,14 @@
+{
+  appName: {
+    message: 'Ultimate Browser Extension - Browser Enhancer',
+    description: 'The name of the extension.',
+  },
+  appDescription: {
+    message: 'Ultimate Browser Extension - A powerful tool to enhance your browsing experience.',
+    description: 'The description of the extension.',
+  },
+  btnTooltip: {
+    message: 'Ultimate Browser Extension',
+    description: 'Tooltip for the button.',
+  },
+}
