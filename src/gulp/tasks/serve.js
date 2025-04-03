@@ -7,6 +7,8 @@ const browserSync = require('browser-sync').create();
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const rootPathPackage = Manager.getRootPath('main');
+const rootPathProject = Manager.getRootPath('project');
 
 // Local URL
 let localUrl;
@@ -22,7 +24,7 @@ const settings = {
   server: {
     // TODO: FIX?
     // baseDir: '_site',
-    baseDir: '_site',
+    baseDir: 'dist',
     middleware: async function (req, res, next) {
       const url = new URL(`${localUrl}${req.url}`);
       const pathname = url.pathname;

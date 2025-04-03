@@ -13,6 +13,8 @@ const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
 const manifest = Manager.getManifest();
 const config = Manager.getConfig();
+const rootPathPackage = Manager.getRootPath('main');
+const rootPathProject = Manager.getRootPath('project');
 
 // Load variables
 const firebaseVersion = version.clean(require('web-manager/package.json').dependencies.firebase);
@@ -28,7 +30,7 @@ const input = [
   'src/assets/js/background.js',
 
   // Include UJ's dist files
-  path.join(__dirname, '../../../dist/assets/js/**/*.js'),
+  `${rootPathPackage}/dist/assets/js/**/*`,
 
   // Files to exclude
   // '!dist/**',

@@ -34,6 +34,7 @@ global.tasks = exports;
 exports.build = series(
   // exports.setup,
   // exports.clean,
+  // exports.themes,
   exports.distribute,
   parallel(exports.sass, exports.webpack, exports.icons),
   exports.package,

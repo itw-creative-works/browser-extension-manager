@@ -8,12 +8,13 @@ const { execute } = require('node-powertools');
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const rootPathPackage = Manager.getRootPath('main');
+const rootPathProject = Manager.getRootPath('project');
 
 // Glob
 const input = [
   // Files to include
-  // `${__dirname}/../../defaults/dist/**/*`,
-  `${path.join(__dirname, '..', '..', 'defaults/dist')}/**/*`,
+  `${rootPathPackage}/dist/defaults/dist/**/*`,
 
   // Files to exclude
 ];

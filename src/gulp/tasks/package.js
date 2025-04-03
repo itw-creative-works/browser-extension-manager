@@ -10,6 +10,8 @@ const JSON5 = require('json5');
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const rootPathPackage = Manager.getRootPath('main');
+const rootPathProject = Manager.getRootPath('project');
 
 // Glob
 const input = [
@@ -34,7 +36,7 @@ async function compileManifest(browser, complete) {
   try {
     const manifestPath = path.join('dist', 'manifest.json');
     const outputPath = path.join('packaged', browser, 'manifest.json');
-    const configPath = path.join(__dirname, '../../', 'config', 'manifest.json');
+    const configPath = path.join(rootPathPackage, 'dist', 'config', 'manifest.json');
 
     // Read and parse using JSON5
     const manifest = JSON5.parse(jetpack.read(manifestPath));
@@ -151,7 +153,7 @@ function packageWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes in the dist folder
-  watch(input, { delay: delay }, series(parallel(...tasks)))
+  watch(input, { delay: delay }, parallel(...tasks))
     .on('change', function (path) {
       logger.log(`[watcher] File ${path} was changed`);
     });

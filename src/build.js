@@ -67,7 +67,7 @@ Manager.prototype.getManifest = Manager.getManifest;
 
 // getConfig: requires and parses config.json
 Manager.getConfig = function () {
-  return JSON5.parse(jetpack.read(path.join(process.cwd(), 'config.json')));
+  return JSON5.parse(jetpack.read(path.join(process.cwd(), 'config', 'config.json')));
 }
 Manager.prototype.getConfig = Manager.getConfig;
 
@@ -81,6 +81,14 @@ Manager.getPackage = function (type) {
   return JSON5.parse(jetpack.read(pkgPath))
 }
 Manager.prototype.getPackage = Manager.getPackage;
+
+// getRootPath: returns the root path of the project or package
+Manager.getRootPath = function (type) {
+  return type === 'project'
+    ? process.cwd()
+    : path.resolve(__dirname, '..')
+}
+Manager.prototype.getRootPath = Manager.getRootPath;
 
 // Require
 Manager.require = function (path) {

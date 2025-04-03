@@ -8,13 +8,13 @@ const responsive = require('gulp-responsive-modern');
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const rootPathPackage = Manager.getRootPath('main');
+const rootPathProject = Manager.getRootPath('project');
 
 // Glob
 const input = [
   // Files to include
-  // 'src/assets/images/**/*.{jpg,jpeg,png}',
-  // 'src/assets/images/icons/**/*.{jpg,jpeg,png}',
-  'src/assets/images/icons/icon.png',
+  'config/icon.png',
 
   // Files to exclude
   // '!dist/**',

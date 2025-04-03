@@ -75,6 +75,12 @@
 
   // Commands
   commands: {
+    // test: {
+    //   description: 'Test',
+    //   suggested_key: {
+    //     default: 'Alt+T',
+    //   },
+    // },
   },
 
   // Sandbox
@@ -82,5 +88,13 @@
     pages: [
       // 'pages/sandbox.html',
     ],
+  },
+
+  // IDs
+  browser_specific_settings: {
+    gecko: {
+      // id: 'my-addon@example.com',
+      // strict_min_version: '91.0',
+    },
   },
 }

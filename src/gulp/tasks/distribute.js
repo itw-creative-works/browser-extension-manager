@@ -11,6 +11,8 @@ const { execute } = require('node-powertools');
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
 const manifest = Manager.getManifest();
+const rootPathPackage = Manager.getRootPath('main');
+const rootPathProject = Manager.getRootPath('project');
 
 // Glob
 const input = [
@@ -86,7 +88,7 @@ function customPathTransform() {
 // Watcher task
 function distributeWatcher(complete) {
   // Quit if in build mode
-  if (process.env.BXM_ === 'true') {
+  if (Manager.isBuildMode()) {
     logger.log('[watcher] Skipping watcher in build mode');
     return complete();
   }

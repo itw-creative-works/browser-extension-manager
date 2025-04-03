@@ -12,6 +12,7 @@ const dirs = [
   '.temp',
   'dist',
   'packaged',
+  // 'src/assets/themes',
 ]
 
 module.exports = async function (options) {
