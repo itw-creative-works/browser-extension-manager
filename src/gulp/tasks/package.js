@@ -58,6 +58,11 @@ async function compileManifest(outputDir) {
       }
     });
 
+    // Add package version to manifest
+    if (manifest.version !== project.version) {
+      manifest.version = project.version;
+    }
+
     // Save as regular JSON
     jetpack.write(outputPath, JSON.stringify(manifest, null, 2));
 

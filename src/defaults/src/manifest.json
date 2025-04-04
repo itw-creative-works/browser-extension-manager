@@ -1,6 +1,5 @@
 {
   // Basic info
-  version: '1.0.0',
   name: '__MSG_appName__',
   description: '__MSG_appDescription__',
 
@@ -11,9 +10,9 @@
 
   // Permissions
   permissions: [
+    // 'activeTab',
     // 'tabs',
     // 'storage',
-    // 'activeTab',
     // 'scripting',
   ],
   host_permissions: [
