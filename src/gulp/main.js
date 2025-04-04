@@ -14,7 +14,7 @@ const tasks = jetpack.list(path.join(__dirname, 'tasks'));
 
 // Init global
 global.tasks = {};
-global.browserSync = null;
+global.websocket = null;
 
 // Load tasks
 tasks.forEach((file) => {

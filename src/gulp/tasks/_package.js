@@ -24,11 +24,18 @@ const input = [
 const output = 'dist';
 const delay = 250;
 
+// Supported browsers
+const BROWSERS = ['chrome', 'firefox', 'opera'];
+
+// Environment Check
+const targetBrowser = process.env.BROWSER;
+const isSpecificBrowser = targetBrowser && BROWSERS.includes(targetBrowser);
+
 // Special Compilation Task for manifest.json with default settings
-async function compileManifest(outputDir) {
+async function compileManifest(browser, complete) {
   try {
     const manifestPath = path.join('dist', 'manifest.json');
-    const outputPath = path.join(outputDir, 'manifest.json');
+    const outputPath = path.join('packaged', browser, 'manifest.json');
     const configPath = path.join(rootPathPackage, 'dist', 'config', 'manifest.json');
 
     // Read and parse using JSON5
@@ -61,25 +68,26 @@ async function compileManifest(outputDir) {
     // Save as regular JSON
     jetpack.write(outputPath, JSON.stringify(manifest, null, 2));
 
-    logger.log(`Manifest compiled with defaults`);
+    logger.log(`Manifest compiled with defaults and saved for ${browser}`);
   } catch (e) {
-    logger.error(`Error compiling manifest`, e);
+    logger.error(`Error compiling manifest for ${browser}`, e);
   }
+  return complete();
 }
 
 // Special Compilation Task for _locales
-async function compileLocales(outputDir) {
+async function compileLocales(browser, complete) {
   try {
     const localesDir = path.join('dist', '_locales');
-    const outputLocalesDir = path.join(outputDir, '_locales');
+    const outputDir = path.join('packaged', browser, '_locales');
 
     // Ensure the directory exists
-    jetpack.dir(outputLocalesDir);
+    jetpack.dir(outputDir);
 
     // Process each locale file
     jetpack.find(localesDir, { matching: '**/*.json' }).forEach(filePath => {
       const relativePath = path.relative(localesDir, filePath);
-      const outputPath = path.join(outputLocalesDir, relativePath);
+      const outputPath = path.join(outputDir, relativePath);
 
       // Read and parse using JSON5
       const localeData = JSON5.parse(jetpack.read(filePath));
@@ -90,109 +98,53 @@ async function compileLocales(outputDir) {
       logger.log(`Locale compiled and saved: ${outputPath}`);
     });
   } catch (e) {
-    logger.error(`Error compiling locales`, e);
+    logger.error(`Error compiling locales for ${browser}`, e);
   }
+  return complete();
 }
 
-// Package Task for raw
-async function packageRaw() {
+// Package Task for Each Browser
+async function packageBrowser(browser, complete) {
   // Log
-  logger.log(`Starting raw packaging...`);
+  logger.log(`Starting packaging for ${browser}...`);
 
   try {
-    const outputDir = 'packaged/raw';
+    const outputDir = `packaged/${browser}`;
 
     // Ensure the directory exists
     jetpack.dir(outputDir);
 
-    // Copy files to raw package directory
+    // Perform any browser-specific adjustments if needed
+    // await execute(`npx bxm setup --browser=${browser}`);
+
+    // Copy files to browser-specific directory
     await execute(`cp -r dist/* ${outputDir}`);
 
     // Compile manifest and locales
-    await compileManifest(outputDir);
-    await compileLocales(outputDir);
-
-    // Log completion
-    logger.log(`Finished raw packaging`);
-  } catch (e) {
-    logger.error(`Error during raw packaging`, e);
-  }
-}
-
-// Create zipped version of raw package
-async function packageZip() {
-  // Log
-  logger.log(`Zipping raw package...`);
-
-  try {
-    const inputDir = 'packaged/raw';
-    const zipPath = 'packaged/extension.zip';
+    await compileManifest(browser, () => {});
+    await compileLocales(browser, () => {});
 
     // Create packed extension (.zip)
     if (Manager.isBuildMode()) {
-      await execute(`zip -r ${zipPath} ${inputDir}`);
-      logger.log(`Zipped package created at ${zipPath}`);
-    } else {
-      logger.log(`Skipping zip (not in build mode)`);
+      await execute(`zip -r ${outputDir}.zip ${outputDir}`);
     }
+
+    // Log completion
+    logger.log(`Finished packaging for ${browser}`);
   } catch (e) {
-    logger.error(`Error zipping package`, e);
-  }
-}
-
-function liveReload() {
-  // Log
-  logger.log('Reloading live server clients...');
-
-  // Quit if in build mode
-  if (Manager.isBuildMode()) {
-    return logger.log('Skipping live reload in non-build mode');
+    logger.error(`Error packaging for ${browser}`, e);
   }
 
-  // Quit if no websocket server
-  if (!global.websocket) {
-    return logger.log('No live reload server found');
-  }
-
-  // Reload each client
-  global.websocket.clients.forEach((client) => {
-    // Get client IP
-    const clientIp = client._socket?.remoteAddress || 'Unknown IP';
-
-    // Log
-    logger.log(`Sending to client at IP: ${clientIp}`);
-
-    // Send
-    client.send(JSON.stringify({ command: 'reload' }))
-  })
-
-  // Complete
-  return;
-}
-
-// Package Task
-async function packageFn(complete) {
-  // Log
-  logger.log('Starting...');
-
-  // Run packageRaw
-  await packageRaw();
-
-  // Run packageZip
-  await packageZip();
-
-  // Run liveReload
-  liveReload();
-
-  // Log
-  logger.log('Finished!');
-
-  // Complete
   return complete();
 }
 
+// Generate tasks for each browser
+const tasks = isSpecificBrowser
+  ? [packageBrowser.bind(null, targetBrowser)]
+  : BROWSERS.map((browser) => packageBrowser.bind(null, browser));
+
 // Watcher Task
-function packageFnWatcher(complete) {
+function packageWatcher(complete) {
   // Quit if in build mode
   if (Manager.isBuildMode()) {
     logger.log('[watcher] Skipping watcher in build mode');
@@ -203,7 +155,7 @@ function packageFnWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes in the dist folder
-  watch(input, { delay: delay }, packageFn)
+  watch(input, { delay: delay }, parallel(...tasks))
     .on('change', function (path) {
       logger.log(`[watcher] File ${path} was changed`);
     });
@@ -213,4 +165,7 @@ function packageFnWatcher(complete) {
 }
 
 // Export tasks
-module.exports = series(packageFn, packageFnWatcher);
+module.exports = series(
+  parallel(...tasks),
+  packageWatcher
+);

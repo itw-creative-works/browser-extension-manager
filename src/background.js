@@ -50,6 +50,9 @@ Manager.prototype.initialize = function () {
     // Import firebase
     // importFirebase(self);
 
+    // Setup livereload
+    setupLiveReload(self);
+
     // Log
     self.log('Initialized!', self.version, self.cache.name, self);
 
@@ -239,6 +242,85 @@ function importFirebase(self) {
 
   // Attach firebase to SWManager
   self.libraries.firebase = firebase;
+}
+
+function setupLiveReload(self) {
+  // Quit if not in dev mode
+  if (self.environment !== 'development') { return };
+
+  // Setup livereload
+  const address = `ws://localhost:{ liveReloadPort }/livereload`;
+  let connection;
+  let isReconnecting = false; // Flag to track reconnections
+
+  // Function to establish a connection
+  function connect() {
+    connection = new WebSocket(address);
+
+    // Log connection
+    self.log(`Reload connecting to ${address}...`);
+
+    // Log connection errors
+    connection.onerror = (e) => {
+      self.error('Reload connection got error:', e);
+    };
+
+    // Log when set up correctly
+    connection.onopen = () => {
+      self.log('Reload connection set up!');
+
+      // Reload the extension only on reconnections
+      if (isReconnecting) {
+        // reload();
+      }
+
+      // Reset the reconnection flag
+      isReconnecting = false;
+    };
+
+    // Handle connection close and attempt to reconnect
+    connection.onclose = () => {
+      // Set time
+      const seconds = 1;
+
+      // Log
+      self.log(`Reload connection closed. Attempting to reconnect in ${seconds} second(s)...`);
+
+      // Set the reconnection flag
+      isReconnecting = true;
+
+      // Reconnect
+      setTimeout(connect, seconds * 1000); // Retry
+    };
+
+    // Handle incoming messages
+    connection.onmessage = function (event) {
+      if (!event.data) {
+        return;
+      }
+
+      // Get data
+      const data = JSON.parse(event.data);
+
+      // Log
+      self.log('Reload connection got message:', data);
+
+      // Handle reload command
+      if (data && data.command === 'reload') {
+        reload();
+      }
+    };
+  }
+
+  function reload() {
+    self.log('Reloading extension...');
+    setTimeout(() => {
+      self.extension.runtime.reload();
+    }, 1000);
+  }
+
+  // Start the initial connection
+  connect();
 }
 
 function arrayUnique(array) {

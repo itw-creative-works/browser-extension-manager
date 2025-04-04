@@ -90,6 +90,16 @@ Manager.getRootPath = function (type) {
 }
 Manager.prototype.getRootPath = Manager.getRootPath;
 
+// getLiveReloadPort: (35729)
+Manager.getLiveReloadPort = function () {
+  // Check if the port is set in the environment
+  process.env.BXM_LIVERELOAD_PORT = process.env.BXM_LIVERELOAD_PORT || 35729;
+
+  // Return the port
+  return process.env.BXM_LIVERELOAD_PORT;
+}
+Manager.prototype.getLiveReloadPort = Manager.getLiveReloadPort;
+
 // Require
 Manager.require = function (path) {
   return require(path);

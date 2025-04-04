@@ -52,6 +52,7 @@ const settings = {
 
       // Specific
       firebaseVersion: firebaseVersion,
+      liveReloadPort: Manager.getLiveReloadPort(),
     }),
   ],
   entry: {

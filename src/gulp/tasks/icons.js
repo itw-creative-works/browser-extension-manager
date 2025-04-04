@@ -14,7 +14,7 @@ const rootPathProject = Manager.getRootPath('project');
 // Glob
 const input = [
   // Files to include
-  'config/icon.png',
+  'config/icon.{png,svg}',
 
   // Files to exclude
   // '!dist/**',
@@ -24,6 +24,9 @@ const delay = 250;
 
 // Main task
 function icons(complete) {
+  // Define sizes
+  const sizes = [1024, 512, 256, 128, 48, 32, 16];
+
   // Log
   logger.log('Starting...');
 
@@ -65,46 +68,16 @@ function icons(complete) {
   return src(files)
     .pipe(
       responsive({
-        '**/*.{jpg,jpeg,png}': [
-          // 1024 resized version in original format
-          {
-            width: 1024,
-            rename: { suffix: '-1024x' }
-          },
-          // 512 resized version in original format
-          {
-            width: 512,
-            rename: { suffix: '-512x' }
-          },
-          // 256 resized version in original format
-          {
-            width: 256,
-            rename: { suffix: '-256x' }
-          },
-          // 128 resized version in original format
-          {
-            width: 128,
-            rename: { suffix: '-128x' }
-          },
-          // 48 resized version in original format
-          {
-            width: 48,
-            rename: { suffix: '-48x' }
-          },
-          // 32 resized version in original format
-          {
-            width: 32,
-            rename: { suffix: '-32x' }
-          },
-          // 16 resized version in original format
-          {
-            width: 16,
-            rename: { suffix: '-16x' }
-          },
+        '**/*.{jpg,jpeg,png,svg}': [
+          // Generate configurations dynamically
+          ...sizes.map((size) => ({
+            width: size,
+            rename: { suffix: `-${size}x`, extname: '.png' },
+          })),
           // Original size in original format
           {
-            rename: { suffix: '' }
-          }
+            rename: { suffix: '', extname: '.png' },
+          },
         ]
       }, {
         quality: 100,
