@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -56,7 +56,6 @@
     "@babel/preset-env": "^7.26.9",
     "@fortawesome/fontawesome-free": "^6.7.2",
     "babel-loader": "^9.2.1",
-    "browser-sync": "^3.0.3",
     "chalk": "^4.1.2",
     "fs-jetpack": "^5.1.0",
     "glob": "^11.0.1",
@@ -70,7 +69,7 @@
     "minimatch": "^10.0.1",
     "node-powertools": "^2.1.5",
     "npm-api": "^1.0.1",
-    "sass": "^1.86.0",
+    "sass": "^1.86.3",
     "through2": "^4.0.2",
     "web-manager": "^3.2.73",
     "webpack": "^5.98.0",
