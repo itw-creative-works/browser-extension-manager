@@ -116,18 +116,44 @@ Affiliatizer.get = function () {
 Affiliatizer.initialize = async function (parent) {
   // Parse the URL
   const url = new URL(window.location.href);
+  const query = url.searchParams;
 
-  // Check if the URL has the resetAffiliatizer parameter
-  if (url.searchParams.get('resetAffiliatizer') === 'true') {
+  // Get query parameters
+  const qsStatus = query.get('affiliatizerStatus');
+
+  // Check if the URL has the affiliatizerStatus parameter
+  if (qsStatus === 'reset') {
     // Log
     parent.log('Resetting affiliatizer data...');
 
     // Reset the data
-    await storage.set({ affiliatizer: null })
-    url.searchParams.delete('resetAffiliatizer');
+    await storage.set({ affiliatizer: null });
+    query.delete('affiliatizerStatus');
 
     // Log
     parent.log('Reset!');
+  } else if (qsStatus === 'block') {
+    // Log
+    parent.log('Affiliatizer is blocked.');
+
+    // Set affiliatizer to 'block' in storage
+    await storage.set({ affiliatizer: 'block' });
+  } else if (qsStatus === 'allow') {
+    // Log
+    parent.log('Affiliatizer is allowed.');
+
+    // Set affiliatizer to 'allow' in storage
+    await storage.set({ affiliatizer: 'allow' });
+  }
+
+  // Check if affiliatizer is blocked
+  const data = await storage.get() || {};
+  const status = data.affiliatizer || 'allow';
+
+  // Check if it's blocked
+  if (status === 'block') {
+    parent.log('Affiliatizer is blocked.');
+    return;
   }
 
   // Loop through the map
