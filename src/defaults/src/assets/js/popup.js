@@ -6,5 +6,9 @@ const bootstrap = require('/node_modules/browser-extension-manager/dist/assets/t
 
 // Initialize
 Manager.initialize(() => {
-  console.log('Initialized');
+  // Do other initialization tasks here
+  // ...
+
+  // Log the initialization
+  Manager.log('Initialized!');
 })

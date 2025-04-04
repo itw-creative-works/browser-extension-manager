@@ -4,5 +4,9 @@ const Manager = new (require('browser-extension-manager/content'));
 // Initialize
 Manager.initialize()
 .then(() => {
-  Manager.log('Initialized');
+  // Do other initialization tasks here
+  // ...
+
+  // Log the initialization
+  Manager.log('Initialized!');
 });
