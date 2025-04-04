@@ -16,9 +16,6 @@ const config = Manager.getConfig();
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
-// Load variables
-const firebaseVersion = version.clean(require('web-manager/package.json').dependencies.firebase);
-
 // Settings
 // const MINIFY = false;
 const MINIFY = Manager.getEnvironment() === 'production';
@@ -41,19 +38,7 @@ const settings = {
   mode: 'production',
   target: ['web', 'es5'],
   plugins: [
-    new ReplacePlugin({
-      // App & Project
-      ...project,
-      ...manifest,
-      ...config,
-
-      // Additional
-      environment: Manager.getEnvironment(),
-
-      // Specific
-      firebaseVersion: firebaseVersion,
-      liveReloadPort: Manager.getLiveReloadPort(),
-    }),
+    new ReplacePlugin(getReplaceOptions()),
   ],
   entry: {
     // Entry is dynamically generated
@@ -183,6 +168,66 @@ function updateEntryPoints() {
 
   // Log
   logger.log('Updated entry points:', settings.entry);
+}
+
+function getReplaceOptions() {
+  // Setup options
+  const options = {
+    // App & Project
+    ...project,
+    ...manifest,
+    ...config,
+
+    // Additional
+    environment: Manager.getEnvironment(),
+
+    // Specific
+    firebaseVersion: version.clean(require('web-manager/package.json').dependencies.firebase),
+    liveReloadPort: Manager.getLiveReloadPort(),
+  }
+  const now = Math.round(new Date().getTime() / 1000);
+
+  // Set webManagerConfiguration
+  options.webManagerConfiguration = JSON.stringify({
+    global: {
+      app: options.app.id,
+      version: options.version,
+      url: options.brand.url,
+      buildTime: now,
+      cacheBreaker: now,
+      brand: options.brand.name,
+      contact: {
+        emailBusiness: options.brand.email,
+        emailSupport: options.brand.email,
+      },
+      download: {},
+      extension: {},
+      validRedirectHosts: ['itwcreativeworks.com'],
+      settings: {
+        libraries: {
+          firebase_app: {
+            enabled: !!options.firebaseConfig.apiKey,
+            config: options.firebaseConfig,
+          },
+          firebase_appCheck: {
+            enabled: false,
+          },
+          cookieconsent: {
+            enabled: false,
+          },
+          chatsy: {
+            enabled: false,
+          },
+          sentry: {
+            enabled: false,
+          },
+        }
+      }
+    }
+  });
+
+  // Return
+  return options;
 }
 
 // Default Task

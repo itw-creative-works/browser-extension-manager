@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -67,7 +67,7 @@
     "json5": "^2.2.3",
     "lodash": "^4.17.21",
     "minimatch": "^10.0.1",
-    "node-powertools": "^2.1.5",
+    "node-powertools": "^2.2.0",
     "npm-api": "^1.0.1",
     "sass": "^1.86.3",
     "through2": "^4.0.2",

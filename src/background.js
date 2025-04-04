@@ -12,12 +12,12 @@ function Manager() {
 
   // Defaults
   self.config = {};
-  self.version = '{ version }';
+  self.version = '%%% version %%%';
   self.brand = {
-    name: '{ brand.name }',
+    name: '%%% brand.name %%%',
   };
-  self.app = '{ app.id }';
-  self.environment = '{ environment }';
+  self.app = '%%% app.id %%%';
+  self.environment = '%%% environment %%%';
   self.libraries = {
     firebase: false,
     messaging: false,
@@ -222,10 +222,10 @@ function setupListeners(self) {
 function importFirebase(self) {
   // Import Firebase libraries
   // importScripts(
-  //   'https://www.gstatic.com/firebasejs/{ firebaseVersion }/firebase-app-compat.js',
-  //   'https://www.gstatic.com/firebasejs/{ firebaseVersion }/firebase-messaging-compat.js',
-  //   'https://www.gstatic.com/firebasejs/{ firebaseVersion }/firebase-database-compat.js',
-  //   'https://www.gstatic.com/firebasejs/{ firebaseVersion }/firebase-firestore-compat.js',
+  //   'https://www.gstatic.com/firebasejs/%%% firebaseVersion %%%/firebase-app-compat.js',
+  //   'https://www.gstatic.com/firebasejs/%%% firebaseVersion %%%/firebase-messaging-compat.js',
+  //   'https://www.gstatic.com/firebasejs/%%% firebaseVersion %%%/firebase-database-compat.js',
+  //   'https://www.gstatic.com/firebasejs/%%% firebaseVersion %%%/firebase-firestore-compat.js',
   // );
   console.error('---0');
   console.error('---1', __dirname);
@@ -249,7 +249,7 @@ function setupLiveReload(self) {
   if (self.environment !== 'development') { return };
 
   // Setup livereload
-  const address = `ws://localhost:{ liveReloadPort }/livereload`;
+  const address = `ws://localhost:%%% liveReloadPort %%%/livereload`;
   let connection;
   let isReconnecting = false; // Flag to track reconnections
 

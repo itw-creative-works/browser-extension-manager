@@ -2,10 +2,6 @@
 const Manager = new (require('../../build.js'));
 const logger = Manager.logger('themes');
 const { src, dest, watch, series } = require('gulp');
-const through2 = require('through2');
-const jetpack = require('fs-jetpack');
-const path = require('path');
-const { execute } = require('node-powertools');
 
 // Load package
 const package = Manager.getPackage('main');

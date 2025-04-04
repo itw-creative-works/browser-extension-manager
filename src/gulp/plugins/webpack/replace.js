@@ -1,21 +1,10 @@
+// Libraries
+const { template } = require('node-powertools');
+
 // Plugin
 class ReplacePlugin {
   constructor(replacements) {
-    this.replacements = this.flatten(replacements)
-  }
-
-  flatten(obj, prefix = '') {
-    let result = {}
-    for (let key in obj) {
-      let value = obj[key]
-      let path = prefix ? `${prefix}.${key}` : key
-      if (typeof value === 'object' && value !== null) {
-        Object.assign(result, this.flatten(value, path))
-      } else {
-        result[`{ ${path} }`] = value
-      }
-    }
-    return result
+    this.replacements = replacements
   }
 
   apply(compiler) {
@@ -27,20 +16,25 @@ class ReplacePlugin {
         },
         (assets) => {
           for (const filename in assets) {
-            if (filename.endsWith('.js')) {
-              let asset = assets[filename]
-              let content = asset.source()
-
-              for (const [placeholder, replacement] of Object.entries(this.replacements)) {
-                const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g')
-                content = content.replace(regex, replacement)
-              }
-
-              compilation.updateAsset(
-                filename,
-                new compiler.webpack.sources.RawSource(content)
-              )
+            // Skip non-JS files
+            if (!filename.endsWith('.js')) {
+              continue
             }
+
+            // Get the asset
+            let asset = assets[filename]
+            let content = asset.source();
+
+            // Use template interpolation
+            content = template(content, this.replacements, {
+              brackets: ['%%%', '%%%'],
+            })
+
+            // Update the asset
+            compilation.updateAsset(
+              filename,
+              new compiler.webpack.sources.RawSource(content)
+            )
           }
         }
       )
