@@ -1,7 +1,3 @@
-// Libraries
-const ext = require('./extension.js');
-const storage = ext.storage;
-
 // Suppported affiliates
 const map = [
   // Amazon
@@ -113,7 +109,11 @@ Affiliatizer.get = function () {
   return map;
 };
 
-Affiliatizer.initialize = async function (parent) {
+Affiliatizer.initialize = async function (Manager) {
+  // Shortcuts
+  const { extension, logger } = Manager;
+  const { storage } = extension;
+
   // Parse the URL
   const url = new URL(window.location.href);
   const query = url.searchParams;
@@ -124,23 +124,23 @@ Affiliatizer.initialize = async function (parent) {
   // Check if the URL has the affiliatizerStatus parameter
   if (qsStatus === 'reset') {
     // Log
-    parent.log('Resetting affiliatizer data...');
+    logger.log('Resetting affiliatizer data...');
 
     // Reset the data
     await storage.set({ affiliatizer: null });
     query.delete('affiliatizerStatus');
 
     // Log
-    parent.log('Reset!');
+    logger.log('Reset!');
   } else if (qsStatus === 'block') {
     // Log
-    parent.log('Affiliatizer is blocked.');
+    logger.log('Affiliatizer is blocked.');
 
     // Set affiliatizer to 'block' in storage
     await storage.set({ affiliatizer: 'block' });
   } else if (qsStatus === 'allow') {
     // Log
-    parent.log('Affiliatizer is allowed.');
+    logger.log('Affiliatizer is allowed.');
 
     // Set affiliatizer to 'allow' in storage
     await storage.set({ affiliatizer: 'allow' });
@@ -152,7 +152,7 @@ Affiliatizer.initialize = async function (parent) {
 
   // Check if it's blocked
   if (status === 'block') {
-    parent.log('Affiliatizer is blocked.');
+    logger.log('Affiliatizer is blocked.');
     return;
   }
 
@@ -162,7 +162,7 @@ Affiliatizer.initialize = async function (parent) {
     const id = item.id;
 
     // Log
-    // parent.log('Checking for', id, item.match, 'in', url.hostname, '...');
+    // logger.log('Checking for', id, item.match, 'in', url.hostname, '...');
 
     // Check if the item matches
     if (!item.match.test(url.hostname)) {
@@ -172,7 +172,7 @@ Affiliatizer.initialize = async function (parent) {
     // Process
     storage.get((data) => {
       // Log
-      parent.log('Matched', data);
+      logger.log('Matched', data);
 
       // Set the default data
       const now = new Date();
@@ -205,7 +205,7 @@ Affiliatizer.initialize = async function (parent) {
       }
 
       // Log
-      parent.log('Redirecting...', newURL.toString());
+      logger.log('Redirecting...', newURL.toString());
 
       // Save to storage
       const newTimestamp = {
