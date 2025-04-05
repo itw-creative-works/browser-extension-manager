@@ -6,9 +6,9 @@ function Manager() {
   const self = this;
 
   // Properties
-  self.webManager = null;
   self.extension = null;
   self.logger = null;
+  self.webManager = null;
 
   // Return
   return self;
@@ -21,9 +21,9 @@ Manager.prototype.initialize = function (callback) {
   const configuration = JSON.parse('%%% webManagerConfiguration %%%');
 
   // Initiate the web manager
-  self.webManager = new WebManager();
   self.extension = require('./lib/extension');
   self.logger = new (require('./lib/logger-lite'))('popup');
+  self.webManager = new WebManager();
 
   // Initialize
   self.webManager.init(configuration, callback);

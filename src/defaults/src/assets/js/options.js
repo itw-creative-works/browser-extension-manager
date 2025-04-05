@@ -7,7 +7,7 @@ window.bootstrap = require('/node_modules/browser-extension-manager/dist/assets/
 // Initialize
 Manager.initialize(() => {
   // Shortcuts
-  const { extension, logger } = Manager;
+  const { extension, logger, webManager } = Manager;
 
   // Do other initialization tasks here
   // ...
