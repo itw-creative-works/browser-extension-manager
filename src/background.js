@@ -9,6 +9,7 @@ function Manager() {
 
   // Properties
   self.extension = null;
+  self.logger = null;
 
   // Defaults
   self.config = {};
@@ -40,6 +41,7 @@ Manager.prototype.initialize = function () {
   return new Promise(function(resolve, reject) {
     // Properties
     self.extension = require('./lib/extension');
+    self.logger = new (require('./lib/logger-lite'))('background');
 
     // Parse config file
     parseConfiguration(self);
@@ -54,31 +56,12 @@ Manager.prototype.initialize = function () {
     setupLiveReload(self);
 
     // Log
-    self.log('Initialized!', self.version, self.cache.name, self);
+    self.logger.log('Initialized!', self.version, self.cache.name, self);
 
     // Return
     return resolve(self);
   });
 };
-
-// Setup logger
-['log', 'error', 'warn', 'info', 'debug'].forEach(method => {
-  Manager.prototype[method] = function() {
-    // Get arguments
-    const time = new Date().toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    // Add prefix
-    const args = [`[${time}] background:`, ...Array.from(arguments)];
-
-    // Call the original console method
-    console[method].apply(console, args);
-  };
-});
 
 // Parse configuration
 function parseConfiguration(self) {
@@ -87,9 +70,9 @@ function parseConfiguration(self) {
     self.cache.breaker = new Date().getTime();
     self.cache.name = `${self.app}-${self.cache.breaker}`;
 
-    self.log('Parsed configuration', self.config);
+    self.logger.log('Parsed configuration', self.config);
   } catch (e) {
-    self.error('Error parsing configuration', e);
+    self.logger.error('Error parsing configuration', e);
   }
 }
 
@@ -118,10 +101,10 @@ function setupListeners(self) {
     const clickAction = payload.click_action || data.click_action || '/';
 
     // Log
-    self.log('Event: notificationclick event', event);
-    self.log('Event: notificationclick data', data);
-    self.log('Event: notificationclick payload', payload);
-    self.log('Event: notificationclick clickAction', clickAction);
+    self.logger.log('Event: notificationclick event', event);
+    self.logger.log('Event: notificationclick data', data);
+    self.logger.log('Event: notificationclick payload', payload);
+    self.logger.log('Event: notificationclick clickAction', clickAction);
 
     // Handle the click
     event.waitUntil(
@@ -153,14 +136,14 @@ function setupListeners(self) {
       if (data.command === '') { return };
 
       // Log
-      self.log('Event: postMessage', data);
+      self.logger.log('Event: postMessage', data);
 
       // Handle the command
       if (data.command === 'function') {
         data.args.function = data.args.function || function() {};
         data.args.function();
       } else if (data.command === 'debug') {
-        self.log('Debug data =', data);
+        self.logger.log('Debug data =', data);
         event.ports[0].postMessage(response);
       } else if (data.command === 'skipWaiting') {
         self.skipWaiting();
@@ -190,13 +173,13 @@ function setupListeners(self) {
             pagesToCache
           )
           .then(() => {
-            self.log('Cached resources.');
+            self.logger.log('Cached resources.');
             event.ports[0].postMessage(response);
           })
           .catch(() => {
             response.status = 'fail';
             event.ports[0].postMessage(response);
-            self.log('Failed to cache resources.')
+            self.logger.log('Failed to cache resources.')
           });
         })
       }
@@ -210,12 +193,12 @@ function setupListeners(self) {
       try { event.ports[0].postMessage(response) } catch (e) {}
 
       // Log
-      self.log('Failed to receive message:', data, e);
+      self.logger.log('Failed to receive message:', data, e);
     }
   });
 
   // Log
-  self.log('Set up listeners');
+  self.logger.log('Set up listeners');
 }
 
 // Import Firebase
@@ -258,16 +241,16 @@ function setupLiveReload(self) {
     connection = new WebSocket(address);
 
     // Log connection
-    self.log(`Reload connecting to ${address}...`);
+    self.logger.log(`Reload connecting to ${address}...`);
 
     // Log connection errors
     connection.onerror = (e) => {
-      self.error('Reload connection got error:', e);
+      self.logger.error('Reload connection got error:', e);
     };
 
     // Log when set up correctly
     connection.onopen = () => {
-      self.log('Reload connection set up!');
+      self.logger.log('Reload connection set up!');
 
       // Reload the extension only on reconnections
       if (isReconnecting) {
@@ -284,7 +267,7 @@ function setupLiveReload(self) {
       const seconds = 1;
 
       // Log
-      self.log(`Reload connection closed. Attempting to reconnect in ${seconds} second(s)...`);
+      self.logger.log(`Reload connection closed. Attempting to reconnect in ${seconds} second(s)...`);
 
       // Set the reconnection flag
       isReconnecting = true;
@@ -303,7 +286,7 @@ function setupLiveReload(self) {
       const data = JSON.parse(event.data);
 
       // Log
-      self.log('Reload connection got message:', data);
+      self.logger.log('Reload connection got message:', data);
 
       // Handle reload command
       if (data && data.command === 'reload') {
@@ -313,7 +296,7 @@ function setupLiveReload(self) {
   }
 
   function reload() {
-    self.log('Reloading extension...');
+    self.logger.log('Reloading extension...');
     setTimeout(() => {
       self.extension.runtime.reload();
     }, 1000);

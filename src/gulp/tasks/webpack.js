@@ -204,6 +204,12 @@ function getReplaceOptions() {
       extension: {},
       validRedirectHosts: ['itwcreativeworks.com'],
       settings: {
+        refreshNewVersion: {
+          enabled: false,
+        },
+        exitPopup: {
+          enabled: false,
+        },
         libraries: {
           firebase_app: {
             enabled: !!options.firebaseConfig.apiKey,

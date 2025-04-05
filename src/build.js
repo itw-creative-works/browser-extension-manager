@@ -96,7 +96,7 @@ Manager.getLiveReloadPort = function () {
   process.env.BXM_LIVERELOAD_PORT = process.env.BXM_LIVERELOAD_PORT || 35729;
 
   // Return the port
-  return process.env.BXM_LIVERELOAD_PORT;
+  return parseInt(process.env.BXM_LIVERELOAD_PORT);
 }
 Manager.prototype.getLiveReloadPort = Manager.getLiveReloadPort;
 

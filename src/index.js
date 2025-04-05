@@ -5,6 +5,11 @@ const WebManager = require('web-manager');
 function Manager() {
   const self = this;
 
+  // Properties
+  self.webManager = null;
+  self.extension = null;
+  self.logger = null;
+
   // Return
   return self;
 }
@@ -16,34 +21,16 @@ Manager.prototype.initialize = function (callback) {
   const configuration = JSON.parse('%%% webManagerConfiguration %%%');
 
   // Initiate the web manager
-  self.manager = new WebManager();
+  self.webManager = new WebManager();
   self.extension = require('./lib/extension');
+  self.logger = new (require('./lib/logger-lite'))('popup');
 
   // Initialize
-  self.manager.init(configuration, callback);
+  self.webManager.init(configuration, callback);
 
   // Return
-  return self.manager;
+  return self.webManager;
 };
-
-// Setup logger
-['log', 'error', 'warn', 'info', 'debug'].forEach(method => {
-  Manager.prototype[method] = function() {
-    // Get arguments
-    const time = new Date().toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    // Add prefix
-    const args = [`[${time}] content:`, ...Array.from(arguments)];
-
-    // Call the original console method
-    console[method].apply(console, args);
-  };
-});
 
 // Export
 module.exports = Manager;
