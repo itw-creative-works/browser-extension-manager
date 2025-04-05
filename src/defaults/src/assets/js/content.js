@@ -5,7 +5,7 @@ const Manager = new (require('browser-extension-manager/content'));
 Manager.initialize()
 .then(() => {
   // Shortcuts
-  const { extension, logger, affiliatizer } = Manager;
+  const { extension, messenger, logger, affiliatizer } = Manager;
 
   // Do other initialization tasks here
   // ...

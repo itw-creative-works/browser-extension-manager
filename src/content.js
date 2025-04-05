@@ -6,6 +6,7 @@ function Manager() {
 
   // Properties
   self.extension = null;
+  self.messenger = null;
   self.logger = null;
   self.affiliatizer = null;
 
@@ -20,6 +21,7 @@ Manager.prototype.initialize = function () {
   return new Promise(function(resolve, reject) {
     // Properties
     self.extension = require('./lib/extension');
+    self.messenger = null;
     self.logger = new (require('./lib/logger-lite'))('content');
     self.affiliatizer = require('./lib/affiliatizer').initialize(self);
 

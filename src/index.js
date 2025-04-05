@@ -7,6 +7,7 @@ function Manager() {
 
   // Properties
   self.extension = null;
+  self.messenger = null;
   self.logger = null;
   self.webManager = null;
 
@@ -22,6 +23,7 @@ Manager.prototype.initialize = function (callback) {
 
   // Initiate the web manager
   self.extension = require('./lib/extension');
+  self.messenger = null;
   self.logger = new (require('./lib/logger-lite'))('popup');
   self.webManager = new WebManager();
 

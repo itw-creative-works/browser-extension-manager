@@ -8,7 +8,7 @@ const Manager = new (require('browser-extension-manager/background'));
 Manager.initialize()
 .then(() => {
   // Shortcuts
-  const { extension, logger } = Manager;
+  const { extension, messenger, logger } = Manager;
 
   // Do other initialization tasks here
   // ...
