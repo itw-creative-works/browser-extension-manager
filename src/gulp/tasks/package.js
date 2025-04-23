@@ -13,6 +13,20 @@ const project = Manager.getPackage('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
+
+function getRedactions() {
+  const REDACTED = './REDACTED_REMOTE_CODE';
+
+  return {
+    'https://app.chatsy.ai/resources/script.js': REDACTED + 1,
+    // '/https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js\\?[^"\'\\s]*/g': REDACTED + 2,
+    'https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js': REDACTED + 2,
+    'https://www.google.com/recaptcha/enterprise.js': REDACTED + 3,
+    'https://apis.google.com/js/api.js': REDACTED + 4,
+    'https://www.google.com/recaptcha/api.js': REDACTED + 5,
+  }
+}
+
 // Glob
 const input = [
   // Files to include
@@ -110,6 +124,25 @@ async function packageRaw() {
 
     // Copy files to raw package directory
     await execute(`cp -r dist/* ${outputDir}`);
+
+    // Loop thru outputDir/dist/assets/js all JS files
+    const jsFiles = jetpack.find(path.join(outputDir, 'assets', 'js'), { matching: '*.js' });
+    const redactions = getRedactions();
+
+    jsFiles.forEach(filePath => {
+      // Load the content
+      let content = jetpack.read(filePath);
+
+      // Replace keys with their corresponding values
+      Object.keys(redactions).forEach(key => {
+        const value = redactions[key];
+        const regex = new RegExp(key, 'g'); // Create a global regex for the key
+        content = content.replace(regex, value);
+      });
+
+      // Write the new content to the file
+      jetpack.write(filePath, content);
+    });
 
     // Compile manifest and locales
     await compileManifest(outputDir);

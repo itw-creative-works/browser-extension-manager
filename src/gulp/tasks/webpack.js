@@ -38,7 +38,8 @@ const settings = {
   mode: 'production',
   target: ['web', 'es5'],
   plugins: [
-    new ReplacePlugin(getReplaceOptions()),
+    new ReplacePlugin(getTemplateReplaceOptions(), { type: 'template' }),
+    // new ReplacePlugin(getRawReplaceOptions(), { type: 'raw', regex: true }),
   ],
   entry: {
     // Entry is dynamically generated
@@ -170,7 +171,7 @@ function updateEntryPoints() {
   logger.log('Updated entry points:', settings.entry);
 }
 
-function getReplaceOptions() {
+function getTemplateReplaceOptions() {
   // Setup options
   const options = {
     // App & Project
@@ -235,6 +236,19 @@ function getReplaceOptions() {
   // Return
   return options;
 }
+
+// function getRawReplaceOptions() {
+//   const REDACTED = './REDACTED_REMOTE_CODE';
+
+//   return {
+//     'https://app.chatsy.ai/resources/script.js': REDACTED + 1,
+//     // '/https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js\\?[^"\'\\s]*/g': REDACTED + 2,
+//     'https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js': REDACTED + 2,
+//     'https://www.google.com/recaptcha/enterprise.js': REDACTED + 3,
+//     'https://apis.google.com/js/api.js': REDACTED + 4,
+//     'https://www.google.com/recaptcha/api.js': REDACTED + 5,
+//   }
+// }
 
 // Default Task
 module.exports = series(webpack, webpackWatcher);
