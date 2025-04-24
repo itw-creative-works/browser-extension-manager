@@ -34,5 +34,13 @@ Manager.prototype.initialize = function (callback) {
   return self.webManager;
 };
 
+Manager.prototype.library = function (name) {
+  const self = this;
+
+  // Return
+  return require(`./lib/${name}`);
+};
+
+
 // Export
 module.exports = Manager;
