@@ -25,7 +25,7 @@ const delay = 250;
 let index = -1;
 
 // Main task
-async function themes(complete) {
+function themes(complete) {
   // Increment index
   index++;
 

@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {

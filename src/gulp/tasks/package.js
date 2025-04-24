@@ -13,20 +13,6 @@ const project = Manager.getPackage('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
-
-function getRedactions() {
-  const REDACTED = './REDACTED_REMOTE_CODE';
-
-  return {
-    'https://app.chatsy.ai/resources/script.js': REDACTED + 1,
-    // '/https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js\\?[^"\'\\s]*/g': REDACTED + 2,
-    'https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js': REDACTED + 2,
-    'https://www.google.com/recaptcha/enterprise.js': REDACTED + 3,
-    'https://apis.google.com/js/api.js': REDACTED + 4,
-    'https://www.google.com/recaptcha/api.js': REDACTED + 5,
-  }
-}
-
 // Glob
 const input = [
   // Files to include
@@ -250,3 +236,17 @@ function packageFnWatcher(complete) {
 
 // Export tasks
 module.exports = series(packageFn, packageFnWatcher);
+
+// Get redactions
+function getRedactions() {
+  const REDACTED = './REDACTED_REMOTE_CODE';
+
+  return {
+    'https://app.chatsy.ai/resources/script.js': REDACTED + 1,
+    // '/https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js\\?[^"\'\\s]*/g': REDACTED + 2,
+    'https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js': REDACTED + 2,
+    'https://www.google.com/recaptcha/enterprise.js': REDACTED + 3,
+    'https://apis.google.com/js/api.js': REDACTED + 4,
+    'https://www.google.com/recaptcha/api.js': REDACTED + 5,
+  }
+}

@@ -29,30 +29,32 @@ const delay = 250;
 let index = -1;
 
 // Main task
-async function distribute(complete) {
-  // Increment index
-  index++;
+function distribute() {
+  return new Promise(async function(resolve, reject) {
+    // Increment index
+    index++;
 
-  // Log
-  logger.log('Starting...');
+    // Log
+    logger.log('Starting...');
 
-  // Create build JSON
-  await createBuildJSON();
+    // Create build JSON
+    await createBuildJSON();
 
-  // Complete
-  return src(input, { base: 'src' })
-    // .pipe(customPathTransform())
-    .pipe(dest(output))
-    .on('end', () => {
-      // Log
-      logger.log('Finished!');
+    // Complete
+    return src(input, { base: 'src' })
+      // .pipe(customTransform())
+      .pipe(dest(output))
+      .on('end', () => {
+        // Log
+        logger.log('Finished!');
 
-      // Complete
-      return complete();
-    });
+        // Complete
+        return resolve();
+      });
+  });
 }
 
-function customPathTransform() {
+function customTransform() {
   return through2.obj(function (file, _, callback) {
     // Skip if it's a directory
     if (file.isDirectory()) {
