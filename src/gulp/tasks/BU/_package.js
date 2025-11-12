@@ -155,7 +155,7 @@ function packageWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes in the dist folder
-  watch(input, { delay: delay }, parallel(...tasks))
+  watch(input, { delay: delay, dot: true }, parallel(...tasks))
     .on('change', function (path) {
       logger.log(`[watcher] File ${path} was changed`);
     });

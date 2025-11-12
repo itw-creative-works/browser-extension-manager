@@ -7,6 +7,7 @@ const { src, dest, watch, series } = require('gulp');
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
 const manifest = Manager.getManifest();
+const config = Manager.getConfig('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
@@ -56,7 +57,7 @@ function themesWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes
-  watch(input, { delay: delay }, themes)
+  watch(input, { delay: delay, dot: true }, themes)
   .on('change', function(path) {
     logger.log(`[watcher] File ${path} was changed`);
   });

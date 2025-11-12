@@ -10,6 +10,7 @@ const JSON5 = require('json5');
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const config = Manager.getConfig('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
@@ -124,6 +125,9 @@ async function packageRaw() {
         const value = redactions[key];
         const regex = new RegExp(key, 'g'); // Create a global regex for the key
         content = content.replace(regex, value);
+
+        // Log replacement
+        logger.log(`Redacted ${key} in ${filePath}`);
       });
 
       // Write the new content to the file
@@ -225,7 +229,7 @@ function packageFnWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes in the dist folder
-  watch(input, { delay: delay }, packageFn)
+  watch(input, { delay: delay, dot: true }, packageFn)
     .on('change', function (path) {
       logger.log(`[watcher] File ${path} was changed`);
     });

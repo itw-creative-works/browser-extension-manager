@@ -6,6 +6,7 @@ const glob = require('glob').globSync;
 const path = require('path');
 const wp = require('webpack');
 const ReplacePlugin = require('../plugins/webpack/replace.js');
+const StripDevBlocksPlugin = require('../plugins/webpack/strip-dev-blocks.js');
 const version = require('wonderful-version');
 
 // Load package
@@ -17,8 +18,6 @@ const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
 // Settings
-// const MINIFY = false;
-const MINIFY = Manager.getEnvironment() === 'production';
 const input = [
   // Include the project's src files
   'src/assets/js/**/*.js',
@@ -93,14 +92,14 @@ const settings = {
                 paths: [path.resolve(process.cwd(), 'node_modules', package.name, 'node_modules')]
               })
             ],
-            compact: MINIFY,
+            compact: Manager.isBuildMode(),
           }
         }
       }
     ]
   },
   optimization: {
-    minimize: MINIFY,
+    minimize: Manager.isBuildMode(),
   },
 }
 
@@ -140,7 +139,7 @@ function webpackWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes
-  watch(input, { delay: delay }, webpack)
+  watch(input, { delay: delay, dot: true }, webpack)
   .on('change', function(path) {
     // Log
     logger.log(`[watcher] File ${path} was changed`);

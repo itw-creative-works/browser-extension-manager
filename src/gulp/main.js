@@ -2,15 +2,19 @@
 const Manager = new (require('../build.js'));
 const logger = Manager.logger('main');
 const argv = Manager.getArguments();
-const { series, parallel, watch } = require('gulp');
+const { series, parallel } = require('gulp');
 const path = require('path');
-const jetpack = require('fs-jetpack');
+const glob = require('glob').globSync;
+
+// Load package
+const package = Manager.getPackage('main');
+const project = Manager.getPackage('project');
 
 // Log
 logger.log('Starting...', argv);
 
 // Load tasks
-const tasks = jetpack.list(path.join(__dirname, 'tasks'));
+const tasks = glob('*.js', { cwd: `${__dirname}/tasks` });
 
 // Init global
 global.tasks = {};
@@ -35,6 +39,7 @@ exports.build = series(
   // exports.setup,
   // exports.clean,
   // exports.themes,
+  exports.defaults,
   exports.distribute,
   parallel(exports.sass, exports.webpack, exports.icons),
   exports.package,
@@ -46,6 +51,6 @@ exports.default = series(
   // exports.clean,
   exports.serve,
   exports.build,
-  exports.developmentRebuild,
+  // exports.developmentRebuild,
   // exports.watcher,
 );

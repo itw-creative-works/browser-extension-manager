@@ -46,7 +46,6 @@
       '16': 'assets/images/icons/icon-16x.png',
     },
     default_title: '__MSG_appName__',
-    default_popup: 'pages/popup.html',
   },
 
   // Content security policy

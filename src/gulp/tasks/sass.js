@@ -10,13 +10,14 @@ const rename = require('gulp-rename');
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const config = Manager.getConfig('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
 // Glob
 const input = [
   // Files to include
-  'src/assets/css/**/*.{css,scss,sass}',
+  'src/assets/css/main.scss',
 
   // Main files
   `${rootPathPackage}/dist/assets/css/**/*`,
@@ -24,8 +25,22 @@ const input = [
   // Files to exclude
   // '!dist/**',
 ];
+// Additional files to watch (but not compile as entry points)
+const watchInput = [
+  // Watch the paths we're compiling
+  ...input,
+
+  // Core CSS - watch for changes but don't compile as entry points
+  `${rootPathPackage}/dist/assets/css/**/*.scss`,
+
+  // Theme CSS - watch for changes but don't compile as entry points
+  `${rootPathPackage}/dist/assets/themes/**/*.scss`,
+  'src/assets/themes/**/*.scss',
+];
+
 const output = 'dist/assets/css';
 const delay = 250;
+const compiled = {};
 
 // SASS Compilation Task
 function sass(complete) {
@@ -33,42 +48,44 @@ function sass(complete) {
   logger.log('Starting...');
 
   // Compile
-  return src(input)
-    .pipe(compiler({ outputStyle: 'compressed' }).on('error', compiler.logError))
-    // .pipe(
-    //   compiler({
-    //     outputStyle: 'compressed',
-    //     // importer: alias.create({
-    //     //   // '@themes': path.resolve(rootPathProject, `node_modules/${package.name}/dist/assets`),
-    //     //   '@themes': '/node_modules/browser-extension-manager/dist/assets/themes',
-    //     // }),
-    //     // importers: [customAliasImporter],
-    //     // includePaths: [
-    //     //   // path.resolve(rootPathProject, `node_modules/${package.name}/dist/assets`),
-    //     //   '/Users/ian/Developer/Repositories/Slinko/slinko-browser-extension/node_modules/browser-extension-manager/dist/assets',
-    //     // ]
-    //     // includePaths: [
-    //     //   path.join(__dirname, '..', '..', 'src'),
-    //     //   path.resolve(__dirname, '../../src/assets'),
-    //     //   path.resolve(__dirname, '../../src'),
-    //     // ],
-    //     // includePaths: [
-    //     //   path.resolve(__dirname, '../../'),
-    //     //   path.resolve(process.cwd(), '../../'),
-    //     // ],
-    //     // loadPaths: [
-    //     //   path.resolve(rootPathProject, `node_modules/${package.name}/dist/assets`),
-    //     // ],
-    //   }).on('error', compiler.logError)
-    // )
-    .pipe(cleanCSS())
-    .pipe(rename((path) => {
-      path.basename += '.bundle';
+  return src(input, { sourcemaps: true })
+    .pipe(compiler({
+      loadPaths: [
+        // So we can use "@use 'ultimate-jekyll-manager' as *;"
+        path.resolve(rootPathPackage, 'dist/assets/css'),
+
+        // So we can use "@use 'themes/{theme}' as *;" in the project
+        // path.resolve(rootPathPackage, 'dist/assets/themes', config.theme.id),
+
+        // So we can load _pages.scss from the project's dist
+        path.resolve(rootPathProject, 'dist/assets/css'),
+
+        // TODO: Add more load paths like node_modules for things like fontawesome
+        // path.resolve(rootPathProject, 'node_modules'),
+      ],
+      // Suppress deprecation warnings from Bootstrap
+      quietDeps: true,
+      // Only show warnings once
+      verbose: false
+    })
+    .on('error', (error) => Manager.reportBuildError(Object.assign(error, { plugin: 'SASS' }), complete)))
+    .pipe(cleanCSS({
+      format: Manager.actLikeProduction() ? 'compressed' : 'beautify',
     }))
-    .pipe(dest(output))
-    .on('end', () => {
+    .pipe(rename((file) => {
+      file.basename += '.bundle';
+
+      // Track the full output path
+      const fullPath = path.resolve(output, file.dirname, `${file.basename}${file.extname}`);
+      compiled[fullPath] = true;
+    }))
+    .pipe(dest(output, { sourcemaps: '.' }))
+    .on('finish', () => {
       // Log
       logger.log('Finished!');
+
+      // Trigger rebuild
+      Manager.triggerRebuild(compiled);
 
       // Complete
       return complete();
@@ -87,7 +104,7 @@ function sassWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes
-  watch(input, { delay: delay }, sass)
+  watch(input, { delay: delay, dot: true }, sass)
   .on('change', function(path) {
     logger.log(`[watcher] File ${path} was changed`);
   });

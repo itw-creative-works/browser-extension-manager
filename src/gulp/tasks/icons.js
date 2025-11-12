@@ -8,6 +8,7 @@ const responsive = require('gulp-responsive-modern');
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const config = Manager.getConfig('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
@@ -109,7 +110,7 @@ function iconsWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes
-  watch(input, { delay: delay }, icons)
+  watch(input, { delay: delay, dot: true }, icons)
   .on('change', function(path) {
     logger.log(`[watcher] File ${path} was changed`);
   });

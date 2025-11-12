@@ -3,14 +3,14 @@ const Manager = new (require('../../build.js'));
 const logger = Manager.logger('distribute');
 const { src, dest, watch, series } = require('gulp');
 const through2 = require('through2');
-const jetpack = require('fs-jetpack');
 const path = require('path');
-const { execute } = require('node-powertools');
+const createTemplateTransform = require('./utils/template-transform');
 
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
 const manifest = Manager.getManifest();
+const config = Manager.getConfig('project');
 const rootPathPackage = Manager.getRootPath('main');
 const rootPathProject = Manager.getRootPath('project');
 
@@ -20,7 +20,15 @@ const input = [
   'src/**/*',
 
   // Files to exclude
-  // '!dist/**',
+  // Images handled by imagemin
+  '!src/**/*.{jpg,jpeg,png,gif,svg,webp}',
+  // JS files handled by webpack
+  '!src/**/*.js',
+  // CSS/SCSS files handled by sass task
+  '!src/**/*.{css,scss,sass}',
+  // Exlcude .DS_Store files
+  '!**/.DS_Store',
+  // Exclude any temp files
 ];
 const output = 'dist';
 const delay = 250;
@@ -37,14 +45,16 @@ function distribute() {
     // Log
     logger.log('Starting...');
 
-    // Create build JSON
-    await createBuildJSON();
-
     // Complete
-    return src(input, { base: 'src' })
-      // .pipe(customTransform())
-      .pipe(dest(output))
-      .on('end', () => {
+    return src(input, {
+      base: 'src',
+      dot: true,
+      encoding: false
+    })
+      .pipe(customTransform())
+      .pipe(createTemplateTransform({site: config}))
+      .pipe(dest(output, { encoding: false }))
+      .on('finish', () => {
         // Log
         logger.log('Finished!');
 
@@ -61,29 +71,30 @@ function customTransform() {
       return callback(null, file);
     }
 
-    // Get relative path
-    const relativePath = path.relative(file.base, file.path);
+    // Get relative path from src base
+    const relativePath = path.relative(file.base, file.path).replace(/\\/g, '/');
 
     // Log
-    // logger.log(`Processing file 111: ${relativePath}`);
+    logger.log(`Processing file: ${relativePath}`);
 
     // Change path if it starts with 'pages/'
-    if (relativePath.startsWith('pages/')) {
-      const newRelativePath = relativePath.replace(/^pages\//, '');
-      file.path = path.join(file.base, newRelativePath);
+    // if (relativePath.startsWith('pages/')) {
+    //   // Remove 'pages/' prefix
+    //   const newRelativePath = relativePath.replace(/^pages\//, '');
 
-      // Log
-      // logger.log(`Changed path to 222: ${file.path}`);
-    }
+    //   // Update file path to remove pages directory
+    //   // This will make src/pages/index.html -> dist/index.html
+    //   file.path = path.join(file.base, newRelativePath);
 
-    // Log
-    // logger.log(`Processing file 333: ${file.path}`);
+    //   // Log
+    //   logger.log(`  -> Moving from pages/ to root: ${newRelativePath}`);
+    // }
 
     // Push the file
     this.push(file);
 
     // Continue
-    callback(null, file);
+    callback();
   });
 }
 
@@ -99,7 +110,7 @@ function distributeWatcher(complete) {
   logger.log('[watcher] Watching for changes...');
 
   // Watch for changes
-  watch(input, { delay: delay }, distribute)
+  watch(input, { delay: delay, dot: true }, distribute)
   .on('change', function(path) {
     logger.log(`[watcher] File ${path} was changed`);
   });
@@ -109,59 +120,8 @@ function distributeWatcher(complete) {
 }
 
 // Default Task
-module.exports = series(distribute, distributeWatcher);
-
-
-// Get git info
-async function getGitInfo() {
-  return await execute('git remote -v')
-  .then((r) => {
-    // Split on whitespace
-    const split = r.split(/\s+/);
-    const url = split[1];
-
-    // Get user and repo
-    const user = url.split('/')[3];
-    const name = url.split('/')[4].replace('.git', '');
-
-    // Return
-    return {user, name};
-  })
-}
-
-// Create build.json
-async function createBuildJSON() {
-  // Create build log JSON
-  try {
-    // Get info first
-    const git = await getGitInfo();
-
-    // Create JSON
-    const json = {
-      timestamp: new Date().toISOString(),
-      repo: {
-        user: git.user,
-        name: git.name,
-      },
-      environment: Manager.getEnvironment(),
-      packages: {
-        'web-manager': require('web-manager/package.json').version,
-        [package.name]: package.version,
-      },
-      manifest: manifest,
-    }
-
-    // Log object
-    // logger.log('Build JSON:', json);
-
-    // Write to file
-    jetpack.write('dist/build.json', JSON.stringify(json, null, 2));
-
-    // Log
-    logger.log('Created build.json');
-  } catch (e) {
-    console.error('Error updating build.json', e);
-  }
-}
-
-
+module.exports = series(
+  // Manager.wrapTask('distribute', distribute),
+  distribute,
+  distributeWatcher
+);
