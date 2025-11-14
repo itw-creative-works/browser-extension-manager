@@ -8,6 +8,9 @@ import Manager from 'browser-extension-manager/background';
 // Create instance
 const manager = new Manager();
 
+// Init service worker
+const serviceWorker = self;
+
 // Initialize
 manager.initialize()
 .then(() => {
