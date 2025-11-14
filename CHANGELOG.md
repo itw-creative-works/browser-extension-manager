@@ -15,7 +15,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
-## [1.1.0] - 2025-01-13
+## [1.1.1] - 2025-11-13
+### Changed
+- Simplified build.js configuration generation by removing webManager config overrides
+- Improved theme JS file watching in webpack config
+- Updated Firebase dependencies to latest versions (firebase 12.6.0)
+
+### Added
+- Cache busting support for CSS/JS includes in page template (?cb={{ cacheBust }})
+- build.js script loading to page template for runtime configuration
+- web-manager watch path for improved development workflow
+
+### Fixed
+- Removed verbose logging in background.js initialization
+- Browser caching issues during development with cache-busted resource URLs
+
+## [1.1.0] - 2025-11-13
 ### BREAKING
 - Complete CSS architecture overhaul - projects using old structure will need migration
 - Removed static Bootstrap CSS files in favor of SCSS source compilation

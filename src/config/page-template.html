@@ -7,15 +7,18 @@
     <title>{{ page.title }}</title>
 
     <!-- Main CSS (includes Font Awesome) -->
-    <link href="/assets/css/main.bundle.css" rel="stylesheet">
+    <link href="/assets/css/main.bundle.css?cb={{ cacheBust }}" rel="stylesheet">
 
     <!-- Component-specific CSS -->
-    <link href="/assets/css/components/{{ page.name }}.bundle.css" rel="stylesheet">
+    <link href="/assets/css/components/{{ page.name }}.bundle.css?cb={{ cacheBust }}" rel="stylesheet">
   </head>
   <body>
     {{ content }}
 
+    <!-- Build -->
+    <script src="/build.js?cb={{ cacheBust }}"></script>
+
     <!-- Main JS -->
-    <script src="/assets/js/components/{{ page.name }}.bundle.js"></script>
+    <script src="/assets/js/components/{{ page.name }}.bundle.js?cb={{ cacheBust }}"></script>
   </body>
 </html>

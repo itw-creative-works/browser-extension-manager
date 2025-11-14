@@ -51,9 +51,6 @@ async function generateBuildJs(outputDir) {
     const manifestPath = path.join('dist', 'manifest.json');
     const manifest = JSON5.parse(jetpack.read(manifestPath));
 
-    // Get web-manager config from project config
-    const webManagerConfig = config.webManager || {};
-
     // Build config object matching web-manager's expected structure
     const buildConfig = {
       timestamp: new Date().toISOString(),
@@ -70,15 +67,7 @@ async function generateBuildJs(outputDir) {
         buildTime: Date.now(),
 
         // Brand configuration (from browser-extension-manager.json or manifest)
-        brand: {
-          id: config.app?.id || manifest.app?.id || 'extension',
-          name: config.brand?.name || manifest.brand?.name || 'Extension',
-          url: config.brand?.url || manifest.brand?.url || '',
-          email: config.brand?.email || manifest.brand?.email || '',
-          brandmark: config.brand?.brandmark || '',
-          wordmark: config.brand?.wordmark || '',
-          combomark: config.brand?.combomark || '',
-        },
+        brand: config.brand || {},
 
         // BEM-specific config
         bem: {
@@ -88,29 +77,32 @@ async function generateBuildJs(outputDir) {
         },
 
         // Web-manager features (matching expected structure)
-        auth: webManagerConfig.auth || { enabled: true, config: {} },
+        auth: { enabled: true, config: {} },
 
         firebase: {
           app: {
-            enabled: !!(config.firebaseConfig?.apiKey || webManagerConfig.firebase?.app?.config?.apiKey),
-            config: config.firebaseConfig || webManagerConfig.firebase?.app?.config || {},
+            enabled: !!(config.firebaseConfig?.apiKey),
+            config: config.firebaseConfig || {},
           },
-          appCheck: webManagerConfig.firebase?.appCheck || { enabled: false, config: {} },
+          appCheck: { enabled: false, config: {} },
         },
 
-        cookieConsent: webManagerConfig.cookieConsent || { enabled: true, config: {} },
-        chatsy: webManagerConfig.chatsy || { enabled: true, config: {} },
-        sentry: webManagerConfig.sentry || {
-          enabled: !!config.sentry?.dsn,
+        cookieConsent: { enabled: true, config: {} },
+        chatsy: { enabled: true, config: {} },
+        sentry: {
+          enabled: !!(config.sentry?.dsn),
           config: config.sentry || {}
         },
-        exitPopup: webManagerConfig.exitPopup || { enabled: false, config: {} },
-        lazyLoading: webManagerConfig.lazyLoading || { enabled: true, config: {} },
-        socialSharing: webManagerConfig.socialSharing || { enabled: false, config: {} },
-        pushNotifications: webManagerConfig.pushNotifications || { enabled: false, config: {} },
-        validRedirectHosts: webManagerConfig.validRedirectHosts || ['itwcreativeworks.com'],
-        refreshNewVersion: webManagerConfig.refreshNewVersion || { enabled: true, config: {} },
-        serviceWorker: webManagerConfig.serviceWorker || { enabled: false, config: {} },
+        exitPopup: { enabled: false, config: {} },
+        lazyLoading: { enabled: true, config: {} },
+        socialSharing: { enabled: false, config: {} },
+        pushNotifications: { enabled: false, config: {} },
+        validRedirectHosts: ['itwcreativeworks.com'],
+        refreshNewVersion: { enabled: true, config: {} },
+        serviceWorker: { enabled: false, config: {} },
+
+        // Analytics
+        google_analytics: config.google_analytics || {},
 
         // Theme config
         theme: config.theme || {},

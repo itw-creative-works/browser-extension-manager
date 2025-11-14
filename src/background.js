@@ -78,8 +78,6 @@ class Manager {
     try {
       // Set cache name
       this.cache.name = `${this.app}-${this.cache.breaker}`;
-
-      this.logger.log('Parsed configuration', this.config);
     } catch (e) {
       this.logger.error('Error parsing configuration', e);
     }

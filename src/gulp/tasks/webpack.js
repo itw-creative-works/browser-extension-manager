@@ -44,6 +44,10 @@ const watchInput = [
   // Core JS - watch for changes but don't compile as entry points
   `${rootPathPackage}/dist/assets/js/**/*.js`,
 
+  // Theme js - watch for changes but don't compile as entry points
+  `${rootPathPackage}/dist/assets/themes/**/*.js`,
+  'src/assets/themes/**/*.js',
+
   // Component files - watch for changes to trigger recompile
   `${rootPathPackage}/src/popup.js`,
   `${rootPathPackage}/src/options.js`,
@@ -51,9 +55,8 @@ const watchInput = [
   `${rootPathPackage}/src/sidepanel.js`,
   `${rootPathPackage}/src/index.js`,
 
-  // Theme js - watch for changes but don't compile as entry points
-  `${rootPathPackage}/dist/assets/themes/**/*.js`,
-  'src/assets/themes/**/*.js',
+  // So we can watch for changes while we're developing web-manager
+  `${rootPathPackage}/../web-manager/src`,
 ];
 
 const delay = 250;
