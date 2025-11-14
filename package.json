@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.1.3",
+  "version": "1.1.5",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -11,7 +11,8 @@
     "./popup": "./dist/popup.js",
     "./sidepanel": "./dist/sidepanel.js",
     "./options": "./dist/options.js",
-    "./page": "./dist/page.js"
+    "./page": "./dist/page.js",
+    "./lib/affiliatizer": "./dist/lib/affiliatizer.js"
   },
   "scripts": {
     "start": "npm run prepare:watch",
