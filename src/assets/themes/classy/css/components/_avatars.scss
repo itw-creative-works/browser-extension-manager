@@ -1,0 +1,32 @@
+// Classy Avatar Components
+// Circular profile images with responsive sizing
+// Uses $avatar-sizes map from config
+
+// ============================================
+// Base Avatar Styles
+// ============================================
+.avatar {
+  display: inline-block;
+  height: map-get($avatar-sizes, null);
+  position: relative;
+  width: map-get($avatar-sizes, null);
+
+  img {
+    height: 100%;
+    -o-object-fit: cover;
+    object-fit: cover;
+    width: 100%;
+  }
+}
+
+// ============================================
+// Size Class Generation
+// ============================================
+@each $size, $dimension in $avatar-sizes {
+  @if $size != null {
+    .avatar-#{$size} {
+      height: $dimension;
+      width: $dimension;
+    }
+  }
+}

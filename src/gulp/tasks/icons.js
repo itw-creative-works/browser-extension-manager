@@ -26,7 +26,7 @@ const delay = 250;
 // Main task
 function icons(complete) {
   // Define sizes
-  const sizes = [1024, 512, 256, 128, 48, 32, 16];
+  const sizes = [1024, 512, 256, 128, 64, 48, 32, 24, 16];
 
   // Log
   logger.log('Starting...');

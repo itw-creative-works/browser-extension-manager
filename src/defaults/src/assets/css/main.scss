@@ -1,0 +1,32 @@
+// ============================================
+// Theme Configuration
+// ============================================
+
+// Customize Browser Extension Manager theme variables here
+@use 'browser-extension-manager' as * with (
+  // ============================================
+  // Brand Colors
+  // ============================================
+  $primary: #5B47FB,
+  // $secondary: #6C757D,
+
+  // ============================================
+  // Typography (uncomment to customize)
+  // ============================================
+  // $font-family-base: 'Inter', -apple-system, sans-serif,
+
+  // ============================================
+  // Borders (uncomment to customize)
+  // ============================================
+  // $border-radius: 0.5rem,
+
+  // ============================================
+  // Add more customizations below
+  // See theme.scss for all customizable variables
+  // ============================================
+);
+
+// ============================================
+// Custom Global Styles
+// ============================================
+// Add your project-specific global CSS below that applies everywhere...

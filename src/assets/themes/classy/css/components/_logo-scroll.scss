@@ -1,0 +1,57 @@
+// Logo Scroll Animation Component
+// Infinite scrolling logo carousel for partner/client sections
+
+// ============================================
+// Container & Track
+// ============================================
+
+.logo-scroll-wrapper {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  overflow: hidden;
+}
+
+.logo-scroll-track {
+  display: flex;
+  width: fit-content;
+  animation: scroll-logos var(--logo-scroll-duration, 30s) linear infinite;
+}
+
+.logo-item {
+  padding: 0 3rem;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  flex-shrink: 0;
+
+  img, svg {
+    height: 40px;
+    width: auto;
+    max-width: 150px;
+    transition: all 0.3s ease;
+  }
+}
+
+@keyframes scroll-logos {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(var(--logo-scroll-distance, -50%));
+  }
+}
+
+// ============================================
+// Responsive Design
+// ============================================
+@media (max-width: 768px) {
+  .logo-item {
+    padding: 0 2rem;
+    height: 50px;
+
+    img, svg {
+      height: 30px;
+    }
+  }
+}

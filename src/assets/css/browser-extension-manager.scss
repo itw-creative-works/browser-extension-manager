@@ -1,0 +1,18 @@
+// ============================================
+// Browser Extension Manager - Main Entry
+// ============================================
+// This is the main SCSS entry point for Browser Extension Manager
+// Import this in your extension components using:
+// @use 'browser-extension-manager' as * with ($primary: #5B47FB);
+
+// Forward the theme (allows consuming project to configure it)
+@forward 'theme';
+@use 'theme' as *;
+
+// Import core extension styles
+@use 'core/_initialize' as *;
+@use 'core/_utilities' as *;
+@use 'core/_animations' as *;
+
+// Import component-specific styles
+@use '_component-specific' as *;

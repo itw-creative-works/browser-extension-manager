@@ -1,13 +1,17 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.0.14",
+  "version": "1.1.0",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
     "./build": "./dist/build.js",
     "./background": "./dist/background.js",
-    "./content": "./dist/content.js"
+    "./content": "./dist/content.js",
+    "./popup": "./dist/popup.js",
+    "./sidepanel": "./dist/sidepanel.js",
+    "./options": "./dist/options.js",
+    "./page": "./dist/page.js"
   },
   "scripts": {
     "start": "npm run prepare:watch",
@@ -63,6 +67,7 @@
     "fs-jetpack": "^5.1.0",
     "glob": "^11.0.3",
     "gulp-clean-css": "^4.3.0",
+    "gulp-filter": "^9.0.1",
     "gulp-rename": "^2.1.0",
     "gulp-responsive-modern": "^1.0.0",
     "gulp-sass": "^6.0.1",

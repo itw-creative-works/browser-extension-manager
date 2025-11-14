@@ -5,7 +5,7 @@
 
   // Background script
   background: {
-    service_worker: 'assets/js/background.bundle.js',
+    service_worker: 'assets/js/components/background.bundle.js',
   },
 
   // Permissions
@@ -22,7 +22,7 @@
 
   // Options page
   options_ui: {
-    page: 'pages/options.html',
+    page: 'views/options/index.html',
   },
 
   // Content scripts
@@ -33,10 +33,10 @@
     //     'https://*/*',
     //   ],
     //   js: [
-    //     'assets/js/content.bundle.js',
+    //     'assets/js/components/content.bundle.js',
     //   ],
     //   css: [
-    //     'assets/css/content.bundle.css',
+    //     'assets/css/components/content.bundle.css',
     //   ],
     //   run_at: 'document_end',
     //   all_frames: false,
@@ -46,7 +46,12 @@
   // Browser action
   action: {
     default_title: '__MSG_appName__',
-    default_popup: 'pages/popup.html',
+    default_popup: 'views/popup/index.html',
+  },
+
+  // Side panel
+  side_panel: {
+    default_path: 'views/sidepanel/index.html',
   },
 
   // Content security policy
@@ -85,7 +90,7 @@
   // Sandbox
   sandbox: {
     pages: [
-      // 'pages/sandbox.html',
+      // 'views/sandbox/index.html',
     ],
   },
 

@@ -104,9 +104,9 @@ Manager.getManifest = function () {
 }
 Manager.prototype.getManifest = Manager.getManifest;
 
-// getConfig: requires and parses config.json
+// getConfig: requires and parses browser-extension-manager.json
 Manager.getConfig = function () {
-  return JSON5.parse(jetpack.read(path.join(process.cwd(), 'config', 'config.json')));
+  return JSON5.parse(jetpack.read(path.join(process.cwd(), 'config', 'browser-extension-manager.json')));
 }
 Manager.prototype.getConfig = Manager.getConfig;
 
@@ -176,6 +176,24 @@ Manager.require = function (path) {
   return require(path);
 };
 Manager.prototype.require = Manager.require;
+
+// Memory monitoring utility
+Manager.getMemoryUsage = function () {
+  const used = process.memoryUsage();
+  return {
+    rss: Math.round(used.rss / 1024 / 1024),
+    heapTotal: Math.round(used.heapTotal / 1024 / 1024),
+    heapUsed: Math.round(used.heapUsed / 1024 / 1024),
+    external: Math.round(used.external / 1024 / 1024),
+  };
+};
+Manager.prototype.getMemoryUsage = Manager.getMemoryUsage;
+
+Manager.logMemory = function (logger, label) {
+  const mem = Manager.getMemoryUsage();
+  logger.log(`[Memory ${label}] RSS: ${mem.rss}MB | Heap Used: ${mem.heapUsed}MB / ${mem.heapTotal}MB | External: ${mem.external}MB`);
+};
+Manager.prototype.logMemory = Manager.logMemory;
 
 // Export
 module.exports = Manager;

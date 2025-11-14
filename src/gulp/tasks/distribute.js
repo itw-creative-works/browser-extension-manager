@@ -4,6 +4,7 @@ const logger = Manager.logger('distribute');
 const { src, dest, watch, series } = require('gulp');
 const through2 = require('through2');
 const path = require('path');
+const jetpack = require('fs-jetpack');
 const createTemplateTransform = require('./utils/template-transform');
 
 // Load package
@@ -26,6 +27,8 @@ const input = [
   '!src/**/*.js',
   // CSS/SCSS files handled by sass task
   '!src/**/*.{css,scss,sass}',
+  // HTML files in views handled by html task
+  '!src/views/**/*.html',
   // Exlcude .DS_Store files
   '!**/.DS_Store',
   // Exclude any temp files
@@ -36,6 +39,33 @@ const delay = 250;
 // Index
 let index = -1;
 
+// Copy FontAwesome webfonts from node_modules if installed
+function copyFontAwesomeWebfonts() {
+  const fontAwesomeWebfontsSource = path.resolve(rootPathProject, 'node_modules/@fortawesome/fontawesome-free/webfonts');
+  const fontAwesomeWebfontsDest = path.resolve(rootPathProject, 'dist/assets/webfonts');
+
+  // Check if FontAwesome is installed
+  if (!jetpack.exists(fontAwesomeWebfontsSource)) {
+    logger.log('[FontAwesome] Not installed, skipping webfonts copy');
+    return;
+  }
+
+  // Create destination directory
+  jetpack.dir(fontAwesomeWebfontsDest);
+
+  // Copy .woff2 files
+  const webfontFiles = jetpack.find(fontAwesomeWebfontsSource, { matching: '*.woff2' });
+
+  webfontFiles.forEach(file => {
+    const fileName = path.basename(file);
+    const destPath = path.join(fontAwesomeWebfontsDest, fileName);
+    jetpack.copy(file, destPath, { overwrite: true });
+    logger.log(`[FontAwesome] Copied ${fileName}`);
+  });
+
+  logger.log(`[FontAwesome] Copied ${webfontFiles.length} webfont file(s)`);
+}
+
 // Main task
 function distribute() {
   return new Promise(async function(resolve, reject) {
@@ -44,6 +74,9 @@ function distribute() {
 
     // Log
     logger.log('Starting...');
+
+    // Copy FontAwesome webfonts first
+    copyFontAwesomeWebfonts();
 
     // Complete
     return src(input, {

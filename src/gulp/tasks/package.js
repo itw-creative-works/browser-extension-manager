@@ -25,6 +25,141 @@ const input = [
 const output = 'dist';
 const delay = 250;
 
+// Set index
+let index = -1;
+
+// JSONP Template for build.js
+const JSONP_TEMPLATE = `
+(function() {
+  // Create a global variable for the config
+  const config = { config };
+
+  // Assign to various global scopes for compatibility
+  if (typeof self !== 'undefined') self.BEM_BUILD_JSON = config;
+  if (typeof window !== 'undefined') window.BEM_BUILD_JSON = config;
+  if (typeof globalThis !== 'undefined') globalThis.BEM_BUILD_JSON = config;
+})();
+`.trim();
+
+// Generate build.js file
+async function generateBuildJs(outputDir) {
+  try {
+    // Get git info
+    const gitInfo = getGitInfo();
+
+    // Get manifest
+    const manifestPath = path.join('dist', 'manifest.json');
+    const manifest = JSON5.parse(jetpack.read(manifestPath));
+
+    // Get web-manager config from project config
+    const webManagerConfig = config.webManager || {};
+
+    // Build config object matching web-manager's expected structure
+    const buildConfig = {
+      timestamp: new Date().toISOString(),
+      repo: gitInfo,
+      environment: Manager.getEnvironment(),
+      packages: {
+        'browser-extension-manager': package.version,
+        'web-manager': getPackageVersion('web-manager'),
+      },
+      config: {
+        // Core metadata
+        version: manifest.version,
+        environment: Manager.getEnvironment(),
+        buildTime: Date.now(),
+
+        // Brand configuration (from browser-extension-manager.json or manifest)
+        brand: {
+          id: config.app?.id || manifest.app?.id || 'extension',
+          name: config.brand?.name || manifest.brand?.name || 'Extension',
+          url: config.brand?.url || manifest.brand?.url || '',
+          email: config.brand?.email || manifest.brand?.email || '',
+          brandmark: config.brand?.brandmark || '',
+          wordmark: config.brand?.wordmark || '',
+          combomark: config.brand?.combomark || '',
+        },
+
+        // BEM-specific config
+        bem: {
+          environment: Manager.getEnvironment(),
+          cache_breaker: Math.round(new Date().getTime() / 1000),
+          liveReloadPort: config.liveReloadPort || 35729,
+        },
+
+        // Web-manager features (matching expected structure)
+        auth: webManagerConfig.auth || { enabled: true, config: {} },
+
+        firebase: {
+          app: {
+            enabled: !!(config.firebaseConfig?.apiKey || webManagerConfig.firebase?.app?.config?.apiKey),
+            config: config.firebaseConfig || webManagerConfig.firebase?.app?.config || {},
+          },
+          appCheck: webManagerConfig.firebase?.appCheck || { enabled: false, config: {} },
+        },
+
+        cookieConsent: webManagerConfig.cookieConsent || { enabled: true, config: {} },
+        chatsy: webManagerConfig.chatsy || { enabled: true, config: {} },
+        sentry: webManagerConfig.sentry || {
+          enabled: !!config.sentry?.dsn,
+          config: config.sentry || {}
+        },
+        exitPopup: webManagerConfig.exitPopup || { enabled: false, config: {} },
+        lazyLoading: webManagerConfig.lazyLoading || { enabled: true, config: {} },
+        socialSharing: webManagerConfig.socialSharing || { enabled: false, config: {} },
+        pushNotifications: webManagerConfig.pushNotifications || { enabled: false, config: {} },
+        validRedirectHosts: webManagerConfig.validRedirectHosts || ['itwcreativeworks.com'],
+        refreshNewVersion: webManagerConfig.refreshNewVersion || { enabled: true, config: {} },
+        serviceWorker: webManagerConfig.serviceWorker || { enabled: false, config: {} },
+
+        // Theme config
+        theme: config.theme || {},
+      }
+    };
+
+    // Write JSON version
+    const jsonPath = path.join(outputDir, 'build.json');
+    jetpack.write(jsonPath, JSON.stringify(buildConfig, null, 2));
+
+    // Write JSONP version for service worker
+    const jsonpContent = JSONP_TEMPLATE.replace('{ config }', JSON.stringify(buildConfig, null, 2));
+    const jsonpPath = path.join(outputDir, 'build.js');
+    jetpack.write(jsonpPath, jsonpContent);
+
+    logger.log(`Generated build.js and build.json`);
+  } catch (e) {
+    logger.error(`Error generating build.js`, e);
+  }
+}
+
+// Get git info
+function getGitInfo() {
+  try {
+    const { execSync } = require('child_process');
+    const user = execSync('git config user.name', { encoding: 'utf8' }).trim();
+    const repo = execSync('git config --get remote.origin.url', { encoding: 'utf8' })
+      .trim()
+      .replace(/.*[\/:]([\w-]+)\/([\w-]+)(\.git)?$/, '$2');
+
+    return { user, name: repo };
+  } catch (e) {
+    return { user: 'unknown', name: 'unknown' };
+  }
+}
+
+// Get package version
+function getPackageVersion(packageName) {
+  try {
+    const pkgPath = require.resolve(`${packageName}/package.json`, {
+      paths: [process.cwd()]
+    });
+    const pkg = require(pkgPath);
+    return pkg.version;
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
 // Special Compilation Task for manifest.json with default settings
 async function compileManifest(outputDir) {
   try {
@@ -134,6 +269,9 @@ async function packageRaw() {
       jetpack.write(filePath, content);
     });
 
+    // Generate build.js and build.json
+    await generateBuildJs(outputDir);
+
     // Compile manifest and locales
     await compileManifest(outputDir);
     await compileLocales(outputDir);
@@ -198,23 +336,37 @@ function liveReload() {
 
 // Package Task
 async function packageFn(complete) {
-  // Log
-  logger.log('Starting...');
+  try {
+    // Log
+    logger.log('Starting...');
 
-  // Run packageRaw
-  await packageRaw();
+    // Increment index
+    index++;
 
-  // Run packageZip
-  await packageZip();
+    // Run build:pre hook
+    await hook('build:pre', index);
 
-  // Run liveReload
-  liveReload();
+    // Run packageRaw
+    await packageRaw();
 
-  // Log
-  logger.log('Finished!');
+    // Run packageZip
+    await packageZip();
 
-  // Complete
-  return complete();
+    // Run build:post hook
+    await hook('build:post', index);
+
+    // Run liveReload
+    liveReload();
+
+    // Log
+    logger.log('Finished!');
+
+    // Complete
+    return complete();
+  } catch (error) {
+    // Handle any errors that occur during package build
+    return Manager.reportBuildError(Object.assign(error, { plugin: 'Package' }), complete);
+  }
 }
 
 // Watcher Task
@@ -240,6 +392,39 @@ function packageFnWatcher(complete) {
 
 // Export tasks
 module.exports = series(packageFn, packageFnWatcher);
+
+// Run hooks
+async function hook(file, index) {
+  // Full path
+  const fullPath = path.join(process.cwd(), 'hooks', `${file}.js`);
+
+  // Log
+  // logger.log(`Loading hook: ${fullPath}`);
+
+  // Check if it exists
+  if (!jetpack.exists(fullPath)) {
+    return console.warn(`Hook not found: ${fullPath}`);
+  }
+
+  // Log
+  logger.log(`Running hook: ${fullPath}`);
+
+  // Load hook
+  let hook;
+  try {
+    // Load the hook
+    hook = require(fullPath);
+  } catch (e) {
+    throw new Error(`Error loading hook: ${fullPath} ${e.stack}`);
+  }
+
+  // Execute hook
+  try {
+    return await hook(index);
+  } catch (e) {
+    throw new Error(`Error running hook: ${fullPath} ${e.stack}`);
+  }
+}
 
 // Get redactions
 function getRedactions() {

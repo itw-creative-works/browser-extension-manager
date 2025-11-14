@@ -1,0 +1,80 @@
+// Core Utility Styles
+// Common utility classes and helpers
+
+// ============================================
+// Display Utilities
+// ============================================
+
+// Properly hide things
+.hidden, [hidden] {
+  display: none !important;
+}
+
+.disabled,
+[disabled],
+:disabled,
+[data-page-loading] button.btn,
+[data-page-loading] .btn-action {
+  cursor: not-allowed !important;
+  pointer-events: all !important;
+
+  // Disable pointer events on all children inside disabled buttons and links
+  // This helps fix event bubbling issues for click listeners
+  * {
+    pointer-events: none !important;
+  }
+}
+
+[data-page-loading] button.btn,
+[data-page-loading] .btn-action {
+  opacity: var(--bs-btn-disabled-opacity);
+  color: var(--bs-btn-disabled-color);
+}
+
+// Prevent pointer events on all children inside buttons and links
+// This helps fix event bubbling issues for click listeners
+button *, a * {
+  pointer-events: none !important;
+}
+
+// ============================================
+// Filter Utilities
+// ============================================
+
+// Filter white
+.filter-white {
+  filter: brightness(0) invert(1);
+}
+
+// Filter black
+.filter-black {
+  filter: brightness(0);
+}
+
+// ============================================
+// Adaptive Theming
+// ============================================
+.filter-adaptive {
+  @extend .filter-black;
+}
+
+[data-bs-theme="dark"] .filter-adaptive {
+  @extend .filter-white;
+}
+
+// .filter-adaptive-inverse {
+//   @extend .filter-white;
+// }
+
+// [data-bs-theme="dark"] .filter-adaptive-inverse {
+//   @extend .filter-black;
+// }
+
+// ============================================
+// Opacity Utilities
+// ============================================
+@for $i from 0 through 10 {
+  .opacity-#{$i * 10} {
+    opacity: $i * 0.1 !important;
+  }
+}

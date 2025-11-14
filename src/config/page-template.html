@@ -1,0 +1,21 @@
+<!doctype html>
+<html data-bs-theme="{{ theme.appearance }}">
+  <head>
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ page.title }}</title>
+
+    <!-- Main CSS (includes Font Awesome) -->
+    <link href="/assets/css/main.bundle.css" rel="stylesheet">
+
+    <!-- Component-specific CSS -->
+    <link href="/assets/css/components/{{ page.name }}.bundle.css" rel="stylesheet">
+  </head>
+  <body>
+    {{ content }}
+
+    <!-- Main JS -->
+    <script src="/assets/js/components/{{ page.name }}.bundle.js"></script>
+  </body>
+</html>

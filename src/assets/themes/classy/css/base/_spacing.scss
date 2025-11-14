@@ -1,0 +1,64 @@
+// Classy Extended Spacing
+// Additional spacing utilities beyond Bootstrap's defaults
+// Uses Bootstrap's $spacer variable which is available via config
+
+// ============================================
+// Extended Padding Classes
+// ============================================
+@for $i from 6 through 10 {
+  $size: if($i == 6, 4, if($i == 7, 5, if($i == 8, 6, if($i == 9, 8, 10))));
+
+  .p-#{$i} { padding: $spacer * $size !important; }
+  .pt-#{$i} { padding-top: $spacer * $size !important; }
+  .pb-#{$i} { padding-bottom: $spacer * $size !important; }
+  .ps-#{$i} { padding-left: $spacer * $size !important; }
+  .pe-#{$i} { padding-right: $spacer * $size !important; }
+  .px-#{$i} {
+    padding-left: $spacer * $size !important;
+    padding-right: $spacer * $size !important;
+  }
+  .py-#{$i} {
+    padding-top: $spacer * $size !important;
+    padding-bottom: $spacer * $size !important;
+  }
+}
+
+// ============================================
+// VH classes
+// ============================================
+// Height utilities using viewport height (vh) units
+.vh-50 { height: 50vh !important; }
+
+// Min-Height utilities using viewport height (vh) units
+.min-vh-50 { min-height: 50vh !important; }
+.min-vh-75 { min-height: 75vh !important; }
+.min-vh-80 { min-height: 80vh !important; }
+.min-vh-90 { min-height: 90vh !important; }
+.min-vh-100 { min-height: 100vh !important; }
+
+// ============================================
+// Max Width Utilities (Bootstrap Breakpoints)
+// ============================================
+// Max width utility classes based on Bootstrap grid breakpoints
+// Usage: mw-sm, mw-md, mw-lg, mw-xl, mw-xxl
+// These set the max-width to match Bootstrap's container breakpoints
+
+.mw-sm {
+  max-width: 576px !important;
+}
+
+.mw-md {
+  max-width: 768px !important;
+}
+
+.mw-lg {
+  max-width: 992px !important;
+}
+
+.mw-xl {
+  max-width: 1200px !important;
+}
+
+.mw-xxl {
+  max-width: 1400px !important;
+}

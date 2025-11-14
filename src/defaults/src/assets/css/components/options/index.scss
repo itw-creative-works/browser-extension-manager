@@ -1,0 +1,14 @@
+// ============================================
+// Custom Options Component Override
+// ============================================
+
+// Import the default options component styles first
+@use 'components/options' as *;
+
+// ============================================
+// Project-Specific Options Customization
+// ============================================
+body {
+  min-width: 400px;
+  max-width: 100%;
+}

@@ -1,0 +1,232 @@
+// Import the theme entry point
+@use './scss/bootstrap.scss' as *;
+
+// Add any custom code here
+// ...
+
+// Adaptive button that uses light styles in light mode and dark styles in dark mode
+.btn-adaptive {
+  @extend .btn-dark;
+}
+
+[data-bs-theme="dark"] .btn-adaptive {
+  @extend .btn-light;
+}
+
+// Do the same for btn-outline-light, btn-outline-dark,
+.btn-outline-adaptive {
+  @extend .btn-outline-dark;
+}
+
+[data-bs-theme="dark"] .btn-outline-adaptive {
+  @extend .btn-outline-light;
+}
+
+// If nav-link is active, give it an underline
+.nav-link.active {
+  text-decoration: underline !important;
+}
+
+// Make a link-muted class that looks like text-muted
+.link-muted {
+  --bs-text-opacity: 1;
+  color: var(--bs-secondary-color) !important;
+  text-decoration: none;
+  transition: opacity 0.15s ease-in-out;
+
+  &:hover,
+  &:focus {
+    color: var(--bs-secondary-color) !important;
+    text-decoration: underline;
+    opacity: 0.75;
+  }
+}
+
+// Padding - Extend to p-8
+$spacer: 1rem;
+@for $i from 6 through 8 {
+  $size: if($i == 6, 4, if($i == 7, 4.5, 5));
+
+  .p-#{$i} { padding: $spacer * $size !important; }
+  .pt-#{$i} { padding-top: $spacer * $size !important; }
+  .pb-#{$i} { padding-bottom: $spacer * $size !important; }
+  .ps-#{$i} { padding-left: $spacer * $size !important; }
+  .pe-#{$i} { padding-right: $spacer * $size !important; }
+  .px-#{$i} {
+    padding-left: $spacer * $size !important;
+    padding-right: $spacer * $size !important;
+  }
+  .py-#{$i} {
+    padding-top: $spacer * $size !important;
+    padding-bottom: $spacer * $size !important;
+  }
+}
+
+// Avatar sizes map
+$avatar-sizes: (
+  null: 3rem,    // default
+  xs: 1.5rem,
+  sm: 2rem,
+  md: 2.5rem,
+  lg: 3.5rem,
+  xl: 5rem,
+  xxl: 7.5rem
+);
+
+// Avatar base styles
+.avatar {
+  display: inline-block;
+  height: map-get($avatar-sizes, null);
+  position: relative;
+  width: map-get($avatar-sizes, null);
+
+  img {
+    height: 100%;
+    -o-object-fit: cover;
+    object-fit: cover;
+    width: 100%;
+  }
+}
+
+// Generate avatar size classes
+@each $size, $dimension in $avatar-sizes {
+  @if $size != null {
+    .avatar-#{$size} {
+      height: $dimension;
+      width: $dimension;
+    }
+  }
+}
+
+// Soft color utilities for all theme colors
+$theme-colors: (
+  "primary": var(--bs-primary),
+  "secondary": var(--bs-secondary),
+  "success": var(--bs-success),
+  "info": var(--bs-info),
+  "warning": var(--bs-warning),
+  "danger": var(--bs-danger),
+  "light": var(--bs-light),
+  "dark": var(--bs-dark)
+);
+
+@each $color-name, $color-value in $theme-colors {
+  // Soft background colors (10% opacity)
+  .bg-#{$color-name}-soft {
+    background-color: rgba(var(--bs-#{$color-name}-rgb), 0.5) !important;
+  }
+
+  // Soft text colors (more vibrant for readability)
+  .text-#{$color-name}-soft {
+    color: rgba(var(--bs-#{$color-name}-rgb), 0.8) !important;
+  }
+
+  // Soft border colors
+  .border-#{$color-name}-soft {
+    border-color: rgba(var(--bs-#{$color-name}-rgb), 0.2) !important;
+  }
+
+  // Soft buttons - background with hover states
+  .btn-#{$color-name}-soft {
+    color: var(--bs-#{$color-name});
+    background-color: rgba(var(--bs-#{$color-name}-rgb), 0.1);
+    border-color: rgba(var(--bs-#{$color-name}-rgb), 0.1);
+
+    &:hover {
+      color: var(--bs-#{$color-name});
+      background-color: rgba(var(--bs-#{$color-name}-rgb), 0.2);
+      border-color: rgba(var(--bs-#{$color-name}-rgb), 0.2);
+    }
+
+    &:focus,
+    &:active,
+    &.active {
+      color: var(--bs-#{$color-name});
+      background-color: rgba(var(--bs-#{$color-name}-rgb), 0.25);
+      border-color: rgba(var(--bs-#{$color-name}-rgb), 0.25);
+      box-shadow: 0 0 0 0.25rem rgba(var(--bs-#{$color-name}-rgb), 0.15);
+    }
+
+    &:disabled,
+    &.disabled {
+      color: rgba(var(--bs-#{$color-name}-rgb), 0.5);
+      background-color: rgba(var(--bs-#{$color-name}-rgb), 0.05);
+      border-color: rgba(var(--bs-#{$color-name}-rgb), 0.05);
+    }
+  }
+
+  // Soft outline buttons
+  .btn-outline-#{$color-name}-soft {
+    color: var(--bs-#{$color-name});
+    background-color: transparent;
+    border-color: rgba(var(--bs-#{$color-name}-rgb), 0.3);
+
+    &:hover {
+      color: var(--bs-#{$color-name});
+      background-color: rgba(var(--bs-#{$color-name}-rgb), 0.1);
+      border-color: rgba(var(--bs-#{$color-name}-rgb), 0.4);
+    }
+
+    &:focus,
+    &:active,
+    &.active {
+      color: var(--bs-#{$color-name});
+      background-color: rgba(var(--bs-#{$color-name}-rgb), 0.15);
+      border-color: rgba(var(--bs-#{$color-name}-rgb), 0.5);
+      box-shadow: 0 0 0 0.25rem rgba(var(--bs-#{$color-name}-rgb), 0.15);
+    }
+  }
+
+  // Soft badges
+  .badge-#{$color-name}-soft {
+    color: var(--bs-#{$color-name});
+    background-color: rgba(var(--bs-#{$color-name}-rgb), 0.1);
+  }
+
+  // Soft alerts
+  .alert-#{$color-name}-soft {
+    color: var(--bs-#{$color-name});
+    background-color: rgba(var(--bs-#{$color-name}-rgb), 0.1);
+    border-color: rgba(var(--bs-#{$color-name}-rgb), 0.2);
+
+    .alert-link {
+      color: var(--bs-#{$color-name});
+      text-decoration: underline;
+    }
+  }
+}
+
+/* Blog post card image height only - using Bootstrap's object-fit-cover class */
+.blog-post-card-image {
+  height: 240px;
+  width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .blog-post-card-image {
+    height: 240px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .blog-post-card-image {
+    height: 200px;
+  }
+}
+
+/* Blog post image height only - using Bootstrap's object-fit-cover class */
+.blog-post-image {
+  max-height: 480px;
+  width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .blog-post-image {
+    max-height: 360px;
+  }
+}
+@media (max-width: 575.98px) {
+  .blog-post-image {
+    max-height: 240px;
+  }
+}

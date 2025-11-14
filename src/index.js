@@ -1,46 +1,46 @@
-// Libraries
-const WebManager = require('web-manager');
+// // Libraries
+// const WebManager = require('web-manager');
 
-// Class
-function Manager() {
-  const self = this;
+// // Class
+// function Manager() {
+//   const self = this;
 
-  // Properties
-  self.extension = null;
-  self.messenger = null;
-  self.logger = null;
-  self.webManager = null;
+//   // Properties
+//   self.extension = null;
+//   self.messenger = null;
+//   self.logger = null;
+//   self.webManager = null;
 
-  // Return
-  return self;
-}
+//   // Return
+//   return self;
+// }
 
-Manager.prototype.initialize = function (callback) {
-  const self = this;
+// Manager.prototype.initialize = function (callback) {
+//   const self = this;
 
-  // Configuration
-  const configuration = JSON.parse('%%% webManagerConfiguration %%%');
+//   // Configuration
+//   const configuration = window.BEM_BUILD_JSON?.config;
 
-  // Initiate the web manager
-  self.extension = require('./lib/extension');
-  self.messenger = null;
-  self.logger = new (require('./lib/logger-lite'))('popup');
-  self.webManager = new WebManager();
+//   // Initiate the web manager
+//   self.extension = require('./lib/extension');
+//   self.messenger = null;
+//   self.logger = new (require('./lib/logger-lite'))('popup');
+//   self.webManager = new WebManager();
 
-  // Initialize
-  self.webManager.init(configuration, callback);
+//   // Initialize
+//   self.webManager.init(configuration, callback);
 
-  // Return
-  return self.webManager;
-};
+//   // Return
+//   return self.webManager;
+// };
 
-Manager.prototype.library = function (name) {
-  const self = this;
+// Manager.prototype.library = function (name) {
+//   const self = this;
 
-  // Return
-  return require(`./lib/${name}`);
-};
+//   // Return
+//   return require(`./lib/${name}`);
+// };
 
 
-// Export
-module.exports = Manager;
+// // Export
+// module.exports = Manager;
