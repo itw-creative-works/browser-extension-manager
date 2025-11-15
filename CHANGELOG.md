@@ -15,6 +15,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.1.6] - 2025-11-14
+### Added
+- Bootstrap exposure to `window.bootstrap` in all UI components (popup, options, sidepanel, page)
+- `@popperjs/core` dependency for Bootstrap's Dropdown, Tooltip, and Popover components
+- Project-specific JS files to webpack watch paths for improved hot reloading
+
+### Changed
+- Modernized content.js manager from prototype-based to ES6 class syntax with async/await
+- Updated affiliatizer import to use dynamic import in content.js
+- Improved logging consistency across all manager classes
+
 ## [1.1.1] - 2025-11-13
 ### Changed
 - Simplified build.js configuration generation by removing webManager config overrides
