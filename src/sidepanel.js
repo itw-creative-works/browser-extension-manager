@@ -3,6 +3,9 @@ import { Manager as WebManager } from 'web-manager';
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
 
+// Import theme (exposes Bootstrap to window.bootstrap)
+import '__theme__/_theme.js';
+
 // Class
 class Manager {
   constructor() {
@@ -26,13 +29,11 @@ class Manager {
     // Initialize
     await this.webManager.initialize(configuration);
 
+    // Log
+    this.logger.log('Initialized!', this);
+
     // Return manager instance
     return this;
-  }
-
-  library(name) {
-    // Dynamic import for libraries
-    return import(`./lib/${name}.js`);
   }
 }
 

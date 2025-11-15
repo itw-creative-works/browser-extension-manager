@@ -1,37 +1,31 @@
 // Libraries
+import extension from './lib/extension.js';
+import LoggerLite from './lib/logger-lite.js';
 
 // Class
-function Manager() {
-  const self = this;
-
-  // Properties
-  self.extension = null;
-  self.messenger = null;
-  self.logger = null;
-  self.affiliatizer = null;
-
-  // Return
-  return self;
-}
-
-// Initialize
-Manager.prototype.initialize = function () {
-  const self = this;
-
-  return new Promise(function(resolve, reject) {
+class Manager {
+  constructor() {
     // Properties
-    self.extension = require('./lib/extension');
-    self.messenger = null;
-    self.logger = new (require('./lib/logger-lite'))('content');
-    self.affiliatizer = require('./lib/affiliatizer').initialize(self);
+    this.extension = null;
+    this.messenger = null;
+    this.logger = null;
+    this.affiliatizer = null;
+  }
+
+  async initialize() {
+    // Set properties
+    this.extension = extension;
+    this.messenger = null;
+    this.logger = new LoggerLite('content');
+    this.affiliatizer = (await import('./lib/affiliatizer.js')).default.initialize(this);
 
     // Log
-    self.logger.log('Initialized!', self);
+    this.logger.log('Initialized!', this);
 
-    // Return
-    return resolve(self);
-  });
-};
+    // Return manager instance
+    return this;
+  }
+}
 
 // Export
-module.exports = Manager;
+export default Manager;

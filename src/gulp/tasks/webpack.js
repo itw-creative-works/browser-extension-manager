@@ -43,6 +43,7 @@ const watchInput = [
 
   // Core JS - watch for changes but don't compile as entry points
   `${rootPathPackage}/dist/assets/js/**/*.js`,
+  `${rootPathProject}/src/assets/js/**/*.js`,
 
   // Theme js - watch for changes but don't compile as entry points
   `${rootPathPackage}/dist/assets/themes/**/*.js`,

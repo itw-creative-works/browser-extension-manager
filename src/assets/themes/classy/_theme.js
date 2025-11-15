@@ -11,19 +11,15 @@ window.bootstrap = bootstrap;
 }
 /* @dev-only:end */
 
-// Import navbar scroll functionality
-import setupNavbarScroll from './js/navbar-scroll.js';
-// Import logo scroll functionality
-import setupLogoScroll from './js/logo-scroll.js';
+// // Import navbar scroll functionality
+// import index from './js/_index.js';
 
-// Initialize navbar scroll effect when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setupNavbarScroll();
-    setupLogoScroll();
-  });
-} else {
-  setupNavbarScroll();
-  setupLogoScroll();
-}
+// // Initialize navbar scroll effect when DOM is ready
+// if (document.readyState === 'loading') {
+//   document.addEventListener('DOMContentLoaded', () => {
+//     index();
+//   });
+// } else {
+//   index();
+// }
 
