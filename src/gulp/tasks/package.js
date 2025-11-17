@@ -429,5 +429,6 @@ function getRedactions() {
     'https://www.google.com/recaptcha/enterprise.js': REDACTED + 3,
     'https://apis.google.com/js/api.js': REDACTED + 4,
     'https://www.google.com/recaptcha/api.js': REDACTED + 5,
+    'https://browser.sentry-cdn.com': REDACTED + 6,
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -35,7 +35,7 @@
   "projectScripts": {
     "start": "npx bxm clean && npx bxm setup && npm run gulp --",
     "gulp": "gulp --cwd ./ --gulpfile ./node_modules/browser-extension-manager/dist/gulp/main.js",
-    "build": "BXM_BUILD_MODE=true npm run gulp -- build"
+    "build": "npx bxm clean && npx bxm setup && BXM_BUILD_MODE=true npm run gulp -- build"
   },
   "engines": {
     "node": "22"
@@ -81,7 +81,7 @@
     "npm-api": "^1.0.1",
     "sass": "^1.94.0",
     "through2": "^4.0.2",
-    "web-manager": "^4.0.23",
+    "web-manager": "^4.0.24",
     "webpack": "^5.102.1",
     "wonderful-fetch": "^1.3.4",
     "wonderful-version": "^1.3.2",

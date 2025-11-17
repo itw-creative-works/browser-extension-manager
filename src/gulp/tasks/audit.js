@@ -23,15 +23,19 @@ const EXTERNAL_SCRIPT_PATTERNS = [
   /<script[^>]*src=["'](https?:\/\/[^"']+)["']/gi,
   // Dynamic script creation
   /createElement\s*\(\s*["']script["']\s*\)[^}]*src\s*=\s*["'](https?:\/\/[^"']+)["']/gi,
-  // Direct URL assignments to src
-  /\.src\s*=\s*["'](https?:\/\/[^"']+)["']/gi,
+  // Direct URL assignments to src (for scripts)
+  /\.src\s*=\s*["'](https?:\/\/[^"']+\.js[^"']*)["']/gi,
   // fetch/XMLHttpRequest calls to external URLs (common pattern for loading scripts)
   /fetch\s*\(\s*["'](https?:\/\/[^"']+\.js[^"']*)["']/gi,
   /XMLHttpRequest[^}]*open\s*\([^,]*,\s*["'](https?:\/\/[^"']+\.js[^"']*)["']/gi,
   // import() dynamic imports of external URLs
-  /import\s*\(\s*["'](https?:\/\/[^"']+)["']/gi,
+  /import\s*\(\s*["'](https?:\/\/[^"']+\.js[^"']*)["']/gi,
   // require() of external URLs
-  /require\s*\(\s*["'](https?:\/\/[^"']+)["']/gi,
+  /require\s*\(\s*["'](https?:\/\/[^"']+\.js[^"']*)["']/gi,
+  // Script-specific CDN URLs (must end in .js or be script-related CDN patterns)
+  /["'](https?:\/\/[^"']*(?:sentry-cdn|unpkg|jsdelivr|cdnjs)[^"']*\.js[^"']*)["']/gi,
+  // Script loading from CDN base URLs (e.g., recaptcha, Google APIs)
+  /["'](https?:\/\/(?:www\.)?(?:google\.com\/recaptcha|apis\.google\.com)[^"']*)["']/gi,
 ];
 
 // Check a single file for external script references

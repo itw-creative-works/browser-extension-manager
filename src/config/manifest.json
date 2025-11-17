@@ -42,12 +42,13 @@
 
   // Browser action
   action: {
-    default_icon: {
-      '48': 'assets/images/icons/icon-48x.png',
-      '32': 'assets/images/icons/icon-32x.png',
-      '24': 'assets/images/icons/icon-24x.png',
-      '16': 'assets/images/icons/icon-16x.png',
-    },
+    // default_icon: {
+    //   '48': 'assets/images/icons/icon-48x.png',
+    //   '32': 'assets/images/icons/icon-32x.png',
+    //   '24': 'assets/images/icons/icon-24x.png',
+    //   '16': 'assets/images/icons/icon-16x.png',
+    // },
+    default_icon: 'assets/images/icons/icon-48x.png',
     default_title: '__MSG_appName__',
     // default_popup: '', // Disabled so we can customize what happens on click
   },
