@@ -6,6 +6,9 @@ WM
 
 BXM
 - extension version (currently bxm-version, but change it)
+- BINDINGS
 
 TODO
 handle auth by redirecting to the config website url
+
+

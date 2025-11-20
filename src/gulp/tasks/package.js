@@ -47,10 +47,6 @@ async function generateBuildJs(outputDir) {
     // Get git info
     const gitInfo = getGitInfo();
 
-    // Get manifest
-    const manifestPath = path.join('dist', 'manifest.json');
-    const manifest = JSON5.parse(jetpack.read(manifestPath));
-
     // Build config object matching web-manager's expected structure
     const buildConfig = {
       timestamp: new Date().toISOString(),
@@ -62,7 +58,7 @@ async function generateBuildJs(outputDir) {
       },
       config: {
         // Core metadata
-        version: manifest.version,
+        version: project.version,
         environment: Manager.getEnvironment(),
         buildTime: Date.now(),
 

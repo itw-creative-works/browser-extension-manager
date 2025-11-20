@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -79,10 +79,10 @@
     "minimatch": "^10.1.1",
     "node-powertools": "^2.3.2",
     "npm-api": "^1.0.1",
-    "sass": "^1.94.0",
+    "sass": "^1.94.2",
     "through2": "^4.0.2",
-    "web-manager": "^4.0.24",
-    "webpack": "^5.102.1",
+    "web-manager": "^4.0.27",
+    "webpack": "^5.103.0",
     "wonderful-fetch": "^1.3.4",
     "wonderful-version": "^1.3.2",
     "ws": "^8.18.3",
