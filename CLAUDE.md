@@ -294,8 +294,34 @@ This enables:
 **Manager classes:** [src/background.js](src/background.js), [src/popup.js](src/popup.js), [src/options.js](src/options.js), [src/sidepanel.js](src/sidepanel.js), [src/page.js](src/page.js), [src/content.js](src/content.js)
 
 **Extension API wrapper:** [src/lib/extension.js](src/lib/extension.js)
-- Provides cross-browser compatibility
-- Normalizes chrome/browser APIs
+
+A universal/agnostic API wrapper that enables cross-browser extension development. Write your extension once and it works on Chrome, Firefox, Edge, and other browsers.
+
+**How it works:**
+- Detects and normalizes APIs from `chrome.*`, `browser.*`, and `window.*` namespaces
+- Automatically selects the correct API based on what's available in the current browser
+- Exports a singleton with unified access to all extension APIs
+
+**Supported APIs:**
+`action`, `alarms`, `bookmarks`, `browsingData`, `browserAction`, `certificateProvider`, `commands`, `contentSettings`, `contextMenus`, `cookies`, `debugger`, `declarativeContent`, `declarativeNetRequest`, `devtools`, `dns`, `documentScan`, `downloads`, `enterprise`, `events`, `extension`, `extensionTypes`, `fileBrowserHandler`, `fileSystemProvider`, `fontSettings`, `gcm`, `history`, `i18n`, `identity`, `idle`, `input`, `instanceID`, `management`, `notifications`, `offscreen`, `omnibox`, `pageAction`, `permissions`, `platformKeys`, `power`, `printerProvider`, `privacy`, `proxy`, `runtime`, `scripting`, `search`, `sessions`, `sidePanel`, `storage`, `tabGroups`, `tabs`, `topSites`, `tts`, `ttsEngine`, `userScripts`, `vpnProvider`, `wallpaper`, `webNavigation`, `webRequest`, `windows`
+
+**Usage:**
+```javascript
+// Exposed via manager - no separate import needed
+const Manager = new (require('browser-extension-manager/popup'));
+
+Manager.initialize().then(() => {
+  const { extension } = Manager;
+
+  // Works on Chrome, Firefox, Edge, etc.
+  extension.tabs.query({ active: true }, (tabs) => { ... });
+  extension.storage.get('key', (result) => { ... });
+  extension.runtime.sendMessage({ type: 'hello' });
+});
+```
+
+**Storage normalization:**
+The wrapper automatically resolves `storage` to `storage.sync` if available, falling back to `storage.local`.
 
 **Logger:** [src/lib/logger.js](src/lib/logger.js)
 - Full logging utility
