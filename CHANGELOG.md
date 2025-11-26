@@ -15,6 +15,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.1.13] - 2025-11-26
+### Added
+- Default `.env` file with publish credential templates for all stores
+- Intelligent line-based merging for `.gitignore` and `.env` files with section markers
+- Template variable support for `.yml` and `.yaml` files
+
+### Changed
+- Credentials now read from `.env` file instead of config (better security)
+- `.gitignore` and `.env` files use section markers to separate defaults from custom values
+- Template transform now passes `versions` data for workflow templating
+
 ## [1.1.6] - 2025-11-14
 ### Added
 - Bootstrap exposure to `window.bootstrap` in all UI components (popup, options, sidepanel, page)
