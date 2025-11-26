@@ -3,6 +3,10 @@
     message: 'Ultimate Browser Extension - Browser Enhancer',
     description: 'The name of the extension.',
   },
+  appNameShort: {
+    message: 'Ultimate Browser Extension',
+    description: 'The short name of the extension.',
+  },
   appDescription: {
     message: 'Ultimate Browser Extension - A powerful tool to enhance your browsing experience.',
     description: 'The description of the extension.',

@@ -45,9 +45,15 @@ npm start
 ## 📦 How to sync with the template
 1. Simply run `npx bxm setup` in Terminal to get all the latest updates from the **Ultimate Browser Extension template**.
 
+## 🌐 Automatic Translation
+When you run `npm run build`, BEM automatically translates your `src/_locales/en/messages.json` to 16 languages using Claude CLI:
+`zh`, `es`, `hi`, `ar`, `pt`, `ru`, `ja`, `de`, `fr`, `ko`, `ur`, `id`, `bn`, `tl`, `vi`, `it`
+
+Only missing translations are generated - existing translations are preserved.
+
 ## 🌎 Publishing your extension
-1. Run `npm run dist` in Terminal to build your extension for production in every browser.
-2. Upload the respective `.zip` files to the browser's extension store.
+1. Run `npm run build` in Terminal to build your extension for production.
+2. Upload the `.zip` file to the browser's extension store.
 
 <!-- ## ⛳️ Flags
 * `--test=false` - Coming soon

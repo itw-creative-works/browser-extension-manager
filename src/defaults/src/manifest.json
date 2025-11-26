@@ -1,6 +1,7 @@
 {
   // Basic info
   name: '__MSG_appName__',
+  short_name: '__MSG_appNameShort__',
   description: '__MSG_appDescription__',
 
   // Background script

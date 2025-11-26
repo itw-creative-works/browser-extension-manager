@@ -40,6 +40,7 @@ exports.build = series(
   // exports.clean,
   // exports.themes,
   exports.defaults,
+  exports.translate,
   exports.distribute,
   parallel(exports.sass, exports.webpack, exports.icons, exports.html),
   exports.package,
