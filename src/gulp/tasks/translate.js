@@ -150,11 +150,29 @@ ${JSON.stringify(messages, null, 2)}
 
 Output the translated JSON:`;
 
+  // Write prompt to temp file to avoid shell escaping issues
+  const tempDir = path.join(process.cwd(), '.temp');
+  const tempFile = path.join(tempDir, `translate-${targetLang}.txt`);
+
   try {
+    // Ensure temp dir exists and write prompt
+    jetpack.dir(tempDir);
+    jetpack.write(tempFile, prompt);
+
+    // Build command - pipe from file
+    const command = `cat "${tempFile}" | claude -p -`;
+
+    // Log start
+    logger.log(`[${targetLang}] Calling Claude CLI...`);
+
     // Run Claude CLI
-    const result = await execute(`claude -p "${prompt.replace(/"/g, '\\"')}"`, {
-      timeout: 120000,
-    });
+    const result = await execute(command);
+
+    // Log response received
+    logger.log(`[${targetLang}] Claude CLI responded (${result.length} chars)`);
+
+    // Clean up temp file
+    jetpack.remove(tempFile);
 
     // Parse result - extract JSON from response
     const jsonMatch = result.match(/\{[\s\S]*\}/);
@@ -162,8 +180,13 @@ Output the translated JSON:`;
       throw new Error('No JSON found in Claude response');
     }
 
+    // Log success
+    logger.log(`[${targetLang}] Parsed JSON successfully`);
+
     return JSON.parse(jsonMatch[0]);
   } catch (e) {
+    // Clean up temp file on error
+    jetpack.remove(tempFile);
     throw new Error(`Claude CLI failed: ${e.message}`);
   }
 }
