@@ -7,7 +7,7 @@ const path = require('path');
  * Creates a through2 transform stream that processes template variables in files
  **/
 function createTemplateTransform(data) {
-  const extensions = ['html', 'md', 'liquid', 'json']
+  const extensions = ['html', 'md', 'liquid', 'json', 'yml', 'yaml']
 
   return through2.obj(function(file, encoding, callback) {
     // Skip directories

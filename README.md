@@ -52,8 +52,39 @@ When you run `npm run build`, BEM automatically translates your `src/_locales/en
 Only missing translations are generated - existing translations are preserved.
 
 ## 🌎 Publishing your extension
+
+### Manual Upload
 1. Run `npm run build` in Terminal to build your extension for production.
 2. Upload the `.zip` file to the browser's extension store.
+
+### Automatic Publishing
+BEM can automatically publish to Chrome, Firefox, and Edge stores when `BXM_IS_PUBLISH=true`:
+
+```bash
+BXM_IS_PUBLISH=true npm run build
+```
+
+**Setup:** Add store credentials to your `.env` file:
+
+```bash
+# Chrome Web Store
+CHROME_EXTENSION_ID="your-extension-id"
+CHROME_CLIENT_ID="your-client-id"
+CHROME_CLIENT_SECRET="your-client-secret"
+CHROME_REFRESH_TOKEN="your-refresh-token"
+
+# Firefox Add-ons
+FIREFOX_EXTENSION_ID="your-extension-id"
+FIREFOX_API_KEY="your-api-key"
+FIREFOX_API_SECRET="your-api-secret"
+
+# Microsoft Edge Add-ons
+EDGE_PRODUCT_ID="your-product-id"
+EDGE_CLIENT_ID="your-client-id"
+EDGE_API_KEY="your-api-key"
+```
+
+Only stores with configured credentials will be published to.
 
 <!-- ## ⛳️ Flags
 * `--test=false` - Coming soon
