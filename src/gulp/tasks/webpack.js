@@ -264,6 +264,36 @@ function webpack(complete) {
     });
   }
 
+  // Check if we have a content component that needs special config
+  // Content scripts run in web page context and can't dynamically load chunks due to CSP
+  const hasContentComponent = Object.keys(mainEntries).some(key =>
+    key === 'components/content' || key.includes('components/content/')
+  );
+
+  if (hasContentComponent) {
+    // Create separate config for content scripts
+    const contentEntry = {};
+    Object.keys(mainEntries).forEach(key => {
+      if (key === 'components/content' || key.includes('components/content/')) {
+        contentEntry[key] = mainEntries[key];
+        delete mainEntries[key];
+      }
+    });
+
+    configs.push({
+      ...settings,
+      entry: contentEntry,
+      optimization: {
+        ...settings.optimization,
+        // Disable runtime chunk for content scripts
+        runtimeChunk: false,
+        // Disable splitting for content scripts to avoid chunk loading issues
+        // Content scripts can't dynamically load chunks due to page CSP restrictions
+        splitChunks: false
+      }
+    });
+  }
+
   // Compiler
   wp(configs, (e, stats) => {
     // Log
