@@ -1,6 +1,7 @@
 // Libraries
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
+import Affiliatizer from './lib/affiliatizer.js';
 
 // Class
 class Manager {
@@ -17,7 +18,7 @@ class Manager {
     this.extension = extension;
     this.messenger = null;
     this.logger = new LoggerLite('content');
-    this.affiliatizer = (await import('./lib/affiliatizer.js')).default.initialize(this);
+    this.affiliatizer = Affiliatizer.initialize(this);
 
     // Log
     this.logger.log('Initialized!', this);
