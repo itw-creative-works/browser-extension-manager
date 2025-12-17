@@ -128,8 +128,8 @@ async function auditFn(complete) {
   auditResults.localeWarnings = [];
 
   try {
-    // Find all files in packaged directory (JS, HTML, etc.)
-    const packagedDir = path.join(rootPathProject, 'packaged', 'raw');
+    // Audit chromium build (code is same for both targets, only manifest differs)
+    const packagedDir = path.join(rootPathProject, 'packaged', 'chromium', 'raw');
 
     if (!jetpack.exists(packagedDir)) {
       logger.log(chalk.yellow('⚠️  Packaged directory not found. Run package task first.'));

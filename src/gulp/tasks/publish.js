@@ -9,8 +9,17 @@ const { execute } = require('node-powertools');
 // Load package
 const project = Manager.getPackage('project');
 
-// Paths
-const zipPath = path.join(process.cwd(), 'packaged', 'extension.zip');
+// Paths for each target
+const PATHS = {
+  chromium: {
+    zip: path.join(process.cwd(), 'packaged', 'chromium', 'extension.zip'),
+    raw: path.join(process.cwd(), 'packaged', 'chromium', 'raw'),
+  },
+  firefox: {
+    zip: path.join(process.cwd(), 'packaged', 'firefox', 'extension.zip'),
+    raw: path.join(process.cwd(), 'packaged', 'firefox', 'raw'),
+  },
+};
 
 // Helper to check if a credential is valid (not empty or placeholder)
 function isValidCredential(value) {
@@ -56,9 +65,13 @@ async function publish(complete) {
   // Log
   logger.log('Starting publish...');
 
-  // Check if zip exists
-  if (!jetpack.exists(zipPath)) {
-    logger.error(`Extension zip not found at ${zipPath}. Run build first.`);
+  // Check if zips exist for each target
+  const missingZips = Object.entries(PATHS)
+    .filter(([, paths]) => !jetpack.exists(paths.zip))
+    .map(([target]) => target);
+
+  if (missingZips.length > 0) {
+    logger.error(`Extension zips not found for: ${missingZips.join(', ')}. Run build first.`);
     return complete();
   }
 
@@ -158,10 +171,10 @@ async function publishToChrome() {
 
   logger.log('[chrome] Uploading to Chrome Web Store...');
 
-  // Use chrome-webstore-upload-cli
+  // Use chrome-webstore-upload-cli with chromium build
   const command = [
     'npx chrome-webstore-upload-cli',
-    `--source "${zipPath}"`,
+    `--source "${PATHS.chromium.zip}"`,
     `--extension-id "${extensionId}"`,
     `--client-id "${clientId}"`,
     `--client-secret "${clientSecret}"`,
@@ -188,11 +201,10 @@ async function publishToFirefox() {
 
   logger.log('[firefox] Uploading to Firefox Add-ons...');
 
-  // Use web-ext sign
-  const rawDir = path.join(process.cwd(), 'packaged', 'raw');
+  // Use web-ext sign with firefox build
   const command = [
     'npx web-ext sign',
-    `--source-dir "${rawDir}"`,
+    `--source-dir "${PATHS.firefox.raw}"`,
     `--api-key "${apiKey}"`,
     `--api-secret "${apiSecret}"`,
     `--channel "${channel}"`,
@@ -218,8 +230,8 @@ async function publishToEdge() {
 
   logger.log('[edge] Uploading to Microsoft Edge Add-ons...');
 
-  // Read zip file
-  const zipBuffer = jetpack.read(zipPath, 'buffer');
+  // Read chromium zip file (Edge uses same build as Chrome)
+  const zipBuffer = jetpack.read(PATHS.chromium.zip, 'buffer');
 
   // Edge API v1.1 endpoint
   const uploadUrl = `https://api.addons.microsoftedge.microsoft.com/v1/products/${productId}/submissions/draft/package`;

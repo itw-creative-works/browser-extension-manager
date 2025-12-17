@@ -152,8 +152,11 @@ function getPackageVersion(packageName) {
   }
 }
 
+// Build targets
+const TARGETS = ['chromium', 'firefox'];
+
 // Special Compilation Task for manifest.json with default settings
-async function compileManifest(outputDir) {
+async function compileManifest(outputDir, target) {
   try {
     const manifestPath = path.join('dist', 'manifest.json');
     const outputPath = path.join(outputDir, 'manifest.json');
@@ -189,10 +192,27 @@ async function compileManifest(outputDir) {
     // Add package version to manifest
     manifest.version = project.version;
 
+    // Apply target-specific manifest adjustments
+    if (manifest.background) {
+      if (target === 'chromium') {
+        // Chrome/Edge uses service_worker only
+        delete manifest.background.scripts;
+      } else if (target === 'firefox') {
+        // Firefox uses scripts array only
+        if (manifest.background.service_worker) {
+          // Ensure scripts array exists (derive from service_worker if needed)
+          if (!manifest.background.scripts) {
+            manifest.background.scripts = [manifest.background.service_worker];
+          }
+          delete manifest.background.service_worker;
+        }
+      }
+    }
+
     // Save as regular JSON
     jetpack.write(outputPath, JSON.stringify(manifest, null, 2));
 
-    logger.log(`Manifest compiled with defaults`);
+    logger.log(`[${target}] Manifest compiled with defaults`);
   } catch (e) {
     logger.error(`Error compiling manifest`, e);
   }
@@ -225,76 +245,92 @@ async function compileLocales(outputDir) {
   }
 }
 
-// Package Task for raw
+// Package Task for raw - creates both chromium and firefox builds
 async function packageRaw() {
   // Log
   logger.log(`Starting raw packaging...`);
 
   try {
-    const outputDir = 'packaged/raw';
-
-    // Ensure the directory exists
-    jetpack.dir(outputDir);
-
-    // Copy files to raw package directory
-    await execute(`cp -r dist/* ${outputDir}`);
-
-    // Loop thru outputDir/dist/assets/js all JS files
-    const jsFiles = jetpack.find(path.join(outputDir, 'assets', 'js'), { matching: '*.js' });
-    const redactions = getRedactions();
-
-    jsFiles.forEach(filePath => {
-      // Load the content
-      let content = jetpack.read(filePath);
-
-      // Replace keys with their corresponding values
-      Object.keys(redactions).forEach(key => {
-        const value = redactions[key];
-        const regex = new RegExp(key, 'g'); // Create a global regex for the key
-        content = content.replace(regex, value);
-
-        // Log replacement
-        logger.log(`Redacted ${key} in ${filePath}`);
-      });
-
-      // Write the new content to the file
-      jetpack.write(filePath, content);
-    });
-
-    // Generate build.js and build.json
-    await generateBuildJs(outputDir);
-
-    // Compile manifest and locales
-    await compileManifest(outputDir);
-    await compileLocales(outputDir);
+    // Build for each target
+    for (const target of TARGETS) {
+      await packageRawForTarget(target);
+    }
 
     // Log completion
-    logger.log(`Finished raw packaging`);
+    logger.log(`Finished raw packaging for all targets`);
   } catch (e) {
     logger.error(`Error during raw packaging`, e);
   }
 }
 
-// Create zipped version of raw package
+// Package raw for a specific target (chromium or firefox)
+async function packageRawForTarget(target) {
+  logger.log(`[${target}] Starting raw packaging...`);
+
+  const outputDir = `packaged/${target}/raw`;
+
+  // Ensure the directory exists (this also cleans it)
+  jetpack.dir(outputDir, { empty: true });
+
+  // Copy files to raw package directory
+  await execute(`cp -r dist/* ${outputDir}`);
+
+  // Loop thru outputDir/assets/js all JS files for redactions
+  const jsFiles = jetpack.find(path.join(outputDir, 'assets', 'js'), { matching: '*.js' });
+  const redactions = getRedactions();
+
+  jsFiles.forEach(filePath => {
+    // Load the content
+    let content = jetpack.read(filePath);
+
+    // Replace keys with their corresponding values
+    Object.keys(redactions).forEach(key => {
+      const value = redactions[key];
+      const regex = new RegExp(key, 'g'); // Create a global regex for the key
+      content = content.replace(regex, value);
+
+      // Log replacement
+      logger.log(`[${target}] Redacted ${key} in ${filePath}`);
+    });
+
+    // Write the new content to the file
+    jetpack.write(filePath, content);
+  });
+
+  // Generate build.js and build.json
+  await generateBuildJs(outputDir);
+
+  // Compile manifest (target-specific) and locales
+  await compileManifest(outputDir, target);
+  await compileLocales(outputDir);
+
+  logger.log(`[${target}] Finished raw packaging`);
+}
+
+// Create zipped version of raw packages for each target
 async function packageZip() {
   // Log
-  logger.log(`Zipping raw package...`);
+  logger.log(`Zipping raw packages...`);
+
+  // Skip if not in build mode
+  if (!Manager.isBuildMode()) {
+    logger.log(`Skipping zip (not in build mode)`);
+    return;
+  }
 
   try {
-    const inputDir = 'packaged/raw';
-    const zipPath = 'packaged/extension.zip';
+    // Create zip for each target
+    for (const target of TARGETS) {
+      const inputDir = `packaged/${target}/raw`;
+      const zipPath = `packaged/${target}/extension.zip`;
 
-    // Create packed extension (.zip)
-    if (Manager.isBuildMode()) {
       // Remove existing zip if it exists
       jetpack.remove(zipPath);
 
       // Zip contents of raw directory (not the directory itself)
       // This ensures manifest.json is at the root of the zip
-      await execute(`cd ${inputDir} && zip -r ../../${zipPath} .`);
-      logger.log(`Zipped package created at ${zipPath}`);
-    } else {
-      logger.log(`Skipping zip (not in build mode)`);
+      await execute(`cd ${inputDir} && zip -r ../extension.zip .`);
+      logger.log(`[${target}] Zipped package created at ${zipPath}`);
     }
   } catch (e) {
     logger.error(`Error zipping package`, e);

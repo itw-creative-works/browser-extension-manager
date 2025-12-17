@@ -15,6 +15,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.2.14] - 2025-12-16
+### BREAKING
+- Packaged output structure changed from `packaged/raw/` to `packaged/{chromium,firefox}/raw/`
+- Extension zip moved from `packaged/extension.zip` to `packaged/{chromium,firefox}/extension.zip`
+
+### Added
+- Multi-target builds for Chromium and Firefox with automatic manifest adjustments
+- Chromium build uses `background.service_worker`, Firefox build uses `background.scripts`
+- Edge loading instructions in BUILD_INSTRUCTIONS.md
+
+### Changed
+- `package.js` now creates separate builds for each browser target
+- `publish.js` uses target-specific paths (chromium zip for Chrome/Edge, firefox raw for Firefox)
+- `audit.js` audits chromium build (code is identical between targets)
+
 ## [1.1.13] - 2025-11-26
 ### Added
 - Default `.env` file with publish credential templates for all stores

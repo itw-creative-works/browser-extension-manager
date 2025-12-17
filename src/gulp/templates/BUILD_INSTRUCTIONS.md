@@ -25,8 +25,9 @@ npm install
 ```sh
 npm run build
 ```
-5. The built extension will be in `packaged/raw/` directory
-6. The packaged zip will be at `packaged/extension.zip`
+5. The built extensions will be in `packaged/` directory:
+   - **Firefox:** `packaged/firefox/raw/` (unpacked) and `packaged/firefox/extension.zip`
+   - **Chrome/Edge:** `packaged/chromium/raw/` (unpacked) and `packaged/chromium/extension.zip`
 
 ## Loading the Extension
 
@@ -34,13 +35,19 @@ npm run build
 1. Go to `about:debugging`
 2. Click "This Firefox"
 3. Click "Load Temporary Add-on"
-4. Select `packaged/raw/manifest.json`
+4. Select `packaged/firefox/raw/manifest.json`
 
 ### Chrome
 1. Go to `chrome://extensions`
 2. Enable "Developer mode"
 3. Click "Load unpacked"
-4. Select the `packaged/raw/` directory
+4. Select the `packaged/chromium/raw/` directory
+
+### Edge
+1. Go to `edge://extensions`
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select the `packaged/chromium/raw/` directory
 
 ## Questions
 
