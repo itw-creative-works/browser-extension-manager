@@ -100,6 +100,10 @@
     gecko: {
       // id: 'my-addon@example.com',
       // strict_min_version: '91.0',
+      data_collection_permissions: {
+        required: ['authenticationInfo'],
+        optional: ['technicalAndInteraction'],
+      },
     },
   },
 }

@@ -1,0 +1,82 @@
+name: Build and Publish Extension
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - main
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '[versions.node]'
+  BXM_BUILD_MODE: 'true'
+  BXM_IS_PUBLISH: 'true'
+
+  # Chrome Web Store credentials
+  CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+  CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+  CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+  CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+  # Firefox Add-ons credentials
+  FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+  FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
+  FIREFOX_API_SECRET: ${{ secrets.FIREFOX_API_SECRET }}
+
+  # Microsoft Edge Add-ons credentials
+  EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+  EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+  EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Setup git config
+        run: |
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Log dependency versions
+        run: |
+          echo "Node: $(node -v)"
+          echo "NPM: $(npm -v)"
+          echo "BXM: $(npx bxm version)"
+          echo ""
+          echo "NPM Dependencies:"
+          npm list --depth=0 || echo ""
+
+      - name: Build and publish extension
+        run: |
+          npx bxm setup && npm run build
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-${{ github.sha }}
+          path: packaged/extension.zip
+          retention-days: 30
+
+      - name: Purge old artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7 days

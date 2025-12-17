@@ -1,5 +1,5 @@
 // Libraries
-const chalk = require('chalk');
+const chalk = require('chalk').default;
 
 // Logger class
 function Logger(name) {

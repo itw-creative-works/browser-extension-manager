@@ -22,8 +22,10 @@
   default_locale: 'en',
 
   // Background script
+  // Chrome uses service_worker, Firefox uses scripts array
   background: {
     service_worker: 'assets/js/components/background.bundle.js',
+    scripts: ['assets/js/components/background.bundle.js'],
   },
 
   // Permissions
@@ -88,8 +90,14 @@
   // IDs
   browser_specific_settings: {
     gecko: {
-      id: 'my-addon@example.com',
+      // id: 'my-addon@example.com',
       strict_min_version: '91.0',
+      // Required for new Firefox extensions as of Nov 2025
+      // https://blog.mozilla.org/addons/2025/10/23/data-collection-consent-changes-for-new-firefox-extensions/
+      data_collection_permissions: {
+        required: ['authenticationInfo'],
+        optional: ['technicalAndInteraction'],
+      },
     },
   },
 }

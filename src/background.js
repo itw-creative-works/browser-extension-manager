@@ -2,22 +2,21 @@
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
 
+// Firebase (static imports - dynamic import() doesn't work in service workers with webpack chunking)
+import { initializeApp, getApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+
 // Variables
 const serviceWorker = self;
 
 // Import build config at the top level (synchronous)
 importScripts('/build.js');
 
-// ⚠️⚠️⚠️ CRITICAL: Setup global listeners BEFORE importing Firebase ⚠️⚠️⚠️
+// ⚠️⚠️⚠️ CRITICAL: Setup global listeners BEFORE any async operations ⚠️⚠️⚠️
 // https://stackoverflow.com/questions/78270541/cant-catch-fcm-notificationclick-event-in-service-worker-using-firebase-messa
+// Note: ES6 static imports above are fine - they're hoisted and bundled by webpack.
+// The issue is with importScripts() calls which must be synchronous at top-level.
 setupGlobalHandlers();
-
-// Import Firebase libraries at the top level (before any async operations)
-// ⚠️ importScripts MUST be called at top-level (synchronously) - it cannot be called inside functions or after async operations
-// importScripts(
-//   'https://www.gstatic.com/firebasejs/%%% firebaseVersion %%%/firebase-app-compat.js',
-//   'https://www.gstatic.com/firebasejs/%%% firebaseVersion %%%/firebase-messaging-compat.js',
-// );
 
 // Class
 class Manager {
@@ -36,7 +35,8 @@ class Manager {
     this.app = this.config?.app?.id || 'extension';
     this.environment = this.config?.bem?.environment || 'production';
     this.libraries = {
-      firebase: false,
+      firebase: null,
+      firebaseAuth: null,
       messaging: false,
       promoServer: false,
     };
@@ -61,6 +61,12 @@ class Manager {
 
     // Initialize Firebase
     this.initializeFirebase();
+
+    // Setup auth token listener (for cross-runtime auth)
+    this.setupAuthTokenListener();
+
+    // Setup auth storage listener (detect sign-out from pages)
+    this.setupAuthStorageListener();
 
     // Setup livereload
     this.setupLiveReload();
@@ -168,6 +174,211 @@ class Manager {
       .then(cache => cache.addAll(pagesToCache))
       .then(() => this.logger.log('Cached resources:', pagesToCache))
       .catch(error => this.logger.error('Failed to cache resources:', error));
+  }
+
+  // Setup auth token listener (monitors tabs for auth tokens from website)
+  setupAuthTokenListener() {
+    // DEBUG: Log the full config to see what we have
+    console.log('[AUTH] setupAuthTokenListener called');
+    console.log('[AUTH] this.config:', this.config);
+    console.log('[AUTH] BEM_BUILD_JSON:', serviceWorker.BEM_BUILD_JSON);
+
+    // Get auth domain from config
+    // Structure is: this.config.firebase.app.config.authDomain
+    const authDomain = this.config?.firebase?.app?.config?.authDomain;
+
+    // Log config for debugging
+    this.logger.log('[AUTH] Config paths:', {
+      firebase_path: this.config?.firebase?.app?.config?.authDomain,
+      resolved: authDomain,
+    });
+
+    // Skip if no auth domain configured
+    if (!authDomain) {
+      this.logger.log('[AUTH] No authDomain configured, skipping auth token listener');
+      return;
+    }
+
+    // Log
+    this.logger.log(`[AUTH] Setting up auth token listener for domain: ${authDomain}`);
+
+    // Listen for tab URL changes
+    this.extension.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+      // Only process when URL changes and is complete
+      if (changeInfo.status !== 'complete' || !tab.url) {
+        return;
+      }
+
+      // Parse the URL
+      let tabUrl;
+      try {
+        tabUrl = new URL(tab.url);
+      } catch (e) {
+        return;
+      }
+
+      // Log every tab update for auth domain matching
+      this.logger.log(`[AUTH] Tab updated: ${tabUrl.hostname} (looking for: ${authDomain})`);
+
+      // Check if this is our auth domain
+      if (tabUrl.hostname !== authDomain) {
+        return;
+      }
+
+      // Log - we found our domain
+      this.logger.log(`[AUTH] Auth domain matched! Checking for authToken param...`);
+
+      // Check for authToken param
+      const authToken = tabUrl.searchParams.get('authToken');
+      if (!authToken) {
+        this.logger.log(`[AUTH] No authToken param found in URL: ${tabUrl.href}`);
+        return;
+      }
+
+      // Get source tab ID to restore after auth
+      const authSourceTabId = tabUrl.searchParams.get('authSourceTabId');
+
+      // Log
+      this.logger.log('[AUTH] Auth token detected in tab:', tabId);
+
+      // Handle the auth token
+      this.handleAuthToken(authToken, tabId, authSourceTabId ? parseInt(authSourceTabId, 10) : null);
+    });
+  }
+
+  // Setup auth storage listener (detect sign-out from pages)
+  setupAuthStorageListener() {
+    this.extension.storage.onChanged.addListener((changes) => {
+      const authChange = changes['bxm:authState'];
+      if (!authChange) {
+        return;
+      }
+
+      this.logger.log('[AUTH] Storage auth state changed:', authChange.newValue ? 'signed in' : 'signed out');
+
+      // If storage was cleared (sign-out from a page) and we have Firebase initialized, sign out
+      if (!authChange.newValue && this.libraries.firebaseAuth) {
+        this.logger.log('[AUTH] Signing out background Firebase...');
+        this.libraries.firebaseAuth.signOut();
+      }
+    });
+
+    this.logger.log('[AUTH] Auth storage listener set up');
+  }
+
+  // Get or initialize Firebase auth (reuse existing instance)
+  getFirebaseAuth() {
+    // Return existing instance if available
+    if (this.libraries.firebaseAuth) {
+      return this.libraries.firebaseAuth;
+    }
+
+    // Get Firebase config
+    const firebaseConfig = this.config?.firebase?.app?.config;
+    if (!firebaseConfig) {
+      throw new Error('Firebase config not available');
+    }
+
+    // Try to get existing app or create new one
+    try {
+      this.libraries.firebase = getApp('bxm-auth');
+    } catch (e) {
+      this.libraries.firebase = initializeApp(firebaseConfig, 'bxm-auth');
+    }
+
+    // Get auth and set up state listener (only once)
+    this.libraries.firebaseAuth = getAuth(this.libraries.firebase);
+
+    // Set up auth state change listener (background is source of truth)
+    onAuthStateChanged(this.libraries.firebaseAuth, (user) => {
+      this.handleAuthStateChange(user);
+    });
+
+    return this.libraries.firebaseAuth;
+  }
+
+  // Handle Firebase auth state changes (source of truth for all contexts)
+  async handleAuthStateChange(user) {
+    this.logger.log('[AUTH] Auth state changed:', user?.email || 'signed out');
+
+    if (user) {
+      // User is signed in - get current stored state to preserve token
+      const result = await new Promise(resolve =>
+        this.extension.storage.get('bxm:authState', resolve)
+      );
+      const currentState = result['bxm:authState'] || {};
+
+      // Update auth state with current user info
+      const authState = {
+        token: currentState.token, // Preserve existing token
+        user: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+        },
+        timestamp: Date.now(),
+      };
+
+      await this.extension.storage.set({ 'bxm:authState': authState });
+      this.logger.log('[AUTH] Auth state synced to storage');
+    } else {
+      // User is signed out - clear storage
+      await this.extension.storage.remove('bxm:authState');
+      this.logger.log('[AUTH] Auth state cleared from storage');
+    }
+  }
+
+  // Handle auth token from website
+  async handleAuthToken(token, tabId, authSourceTabId = null) {
+    try {
+      // Log
+      this.logger.log('[AUTH] Processing auth token...');
+
+      // Get or initialize Firebase auth
+      const auth = this.getFirebaseAuth();
+
+      // Sign in with custom token
+      this.logger.log('[AUTH] Calling signInWithCustomToken...');
+      const userCredential = await signInWithCustomToken(auth, token);
+      const user = userCredential.user;
+
+      // Log
+      this.logger.log('[AUTH] Signed in successfully:', user.email);
+
+      // Save token to storage (user state will be synced by onAuthStateChanged)
+      const result = await new Promise(resolve =>
+        this.extension.storage.get('bxm:authState', resolve)
+      );
+      const currentState = result['bxm:authState'] || {};
+
+      await this.extension.storage.set({
+        'bxm:authState': {
+          ...currentState,
+          token: token,
+          timestamp: Date.now(),
+        }
+      });
+
+      // Close the auth tab
+      await this.extension.tabs.remove(tabId);
+      this.logger.log('[AUTH] Auth tab closed');
+
+      // Reactivate the source tab if provided
+      if (authSourceTabId) {
+        try {
+          await this.extension.tabs.update(authSourceTabId, { active: true });
+          this.logger.log('[AUTH] Restored source tab:', authSourceTabId);
+        } catch (e) {
+          // Tab may have been closed, ignore
+          this.logger.log('[AUTH] Could not restore source tab (may be closed):', authSourceTabId);
+        }
+      }
+
+    } catch (error) {
+      this.logger.error('[AUTH] Error handling auth token:', error);
+    }
   }
 
   // Setup livereload

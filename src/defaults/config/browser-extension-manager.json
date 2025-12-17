@@ -1,11 +1,9 @@
 {
-  app: {
-    id: 'ultimate-jekyll',
-  },
   theme: {
     id: 'classy',
   },
   brand: {
+    id: 'ultimate-jekyll',
     name: 'Ultimate Jekyll',
     url: 'https://ultimate-jekyll.itwcreativeworks.com',
     contact: {
@@ -25,13 +23,13 @@
     secret: '',
   },
   firebaseConfig: {
-    apiKey: 'AIzaSyDzy5BG9-i9RmymyFx6mfwSgaRioyfa0Cc',
-    authDomain: 'ultimate-jekyll.itwcreativeworks.com',
-    databaseURL: 'https://ultimate-jekyll.firebaseio.com',
-    projectId: 'ultimate-jekyll',
-    storageBucket: 'ultimate-jekyll.appspot.com',
-    messagingSenderId: '837186164890',
-    appId: '1:837186164890:web:f1f59569d661078c',
-    measurementId: 'G-FR3X7X4KYN',
+    apiKey: 'AIzaSyD1MvM-EQC_eVWqaTe5ImWALwhBr7iXgh8',
+    authDomain: 'universal-auth.itwcreativeworks.com',
+    databaseURL: 'https://itwcw-universal-auth.firebaseio.com',
+    projectId: 'itwcw-universal-auth',
+    storageBucket: 'itwcw-universal-auth.appspot.com',
+    messagingSenderId: '195162582358',
+    appId: '1:195162582358:web:6f9320c516d9ab4838baf7',
+    measurementId: 'G-W08HGRW4S',
   },
 }

@@ -49,12 +49,11 @@ const watchInput = [
   `${rootPathPackage}/dist/assets/themes/**/*.js`,
   'src/assets/themes/**/*.js',
 
-  // Component files - watch for changes to trigger recompile
-  `${rootPathPackage}/src/popup.js`,
-  `${rootPathPackage}/src/options.js`,
-  `${rootPathPackage}/src/page.js`,
-  `${rootPathPackage}/src/sidepanel.js`,
-  `${rootPathPackage}/src/index.js`,
+  // All project assets js - watch for changes but don't compile as entry points
+  'src/assets/js/**/*.js',
+
+  // All BEM package src files - watch for changes (includes background.js, popup.js, etc.)
+  `${rootPathPackage}/src/**/*.js`,
 
   // So we can watch for changes while we're developing web-manager
   `${rootPathPackage}/../web-manager/src`,
@@ -108,6 +107,9 @@ function getSettings() {
       },
       // Add module resolution paths
       modules: [
+        // Local web-manager's node_modules (for when we're using "web-manager": "file:../web-manager")
+        path.resolve(rootPathPackage, '../web-manager/node_modules'),
+
         // Package's node_modules
         path.resolve(rootPathPackage, 'node_modules'),
 

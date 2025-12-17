@@ -58,6 +58,7 @@ async function generateBuildJs(outputDir) {
       },
       config: {
         // Core metadata
+        runtime: 'browser-extension',
         version: project.version,
         environment: Manager.getEnvironment(),
         buildTime: Date.now(),
@@ -97,8 +98,11 @@ async function generateBuildJs(outputDir) {
         refreshNewVersion: { enabled: true, config: {} },
         serviceWorker: { enabled: false, config: {} },
 
-        // Analytics
-        google_analytics: config.google_analytics || {},
+        // Tracking
+        tracking: {
+          'google-analytics': config.google_analytics?.id || '',
+          'google-analytics-secret': config.google_analytics?.secret || '',
+        },
 
         // Theme config
         theme: config.theme || {},
@@ -282,13 +286,77 @@ async function packageZip() {
 
     // Create packed extension (.zip)
     if (Manager.isBuildMode()) {
-      await execute(`zip -r ${zipPath} ${inputDir}`);
+      // Remove existing zip if it exists
+      jetpack.remove(zipPath);
+
+      // Zip contents of raw directory (not the directory itself)
+      // This ensures manifest.json is at the root of the zip
+      await execute(`cd ${inputDir} && zip -r ../../${zipPath} .`);
       logger.log(`Zipped package created at ${zipPath}`);
     } else {
       logger.log(`Skipping zip (not in build mode)`);
     }
   } catch (e) {
     logger.error(`Error zipping package`, e);
+  }
+}
+
+// Create source code zip for Firefox review
+async function packageSource() {
+  const { template } = require('node-powertools');
+  const os = require('os');
+
+  // Log
+  logger.log(`Zipping source code...`);
+
+  try {
+    const sourceZipPath = 'packaged/source.zip';
+
+    // Only in build mode
+    if (!Manager.isBuildMode()) {
+      logger.log(`Skipping source zip (not in build mode)`);
+      return;
+    }
+
+    // Remove existing zip if it exists
+    jetpack.remove(sourceZipPath);
+
+    // Get system info
+    const platform = os.platform();
+    const platformName = {
+      darwin: 'macOS',
+      win32: 'Windows',
+      linux: 'Linux',
+    }[platform] || platform;
+
+    // Read template and replace variables
+    const templatePath = path.join(rootPathPackage, 'dist', 'gulp', 'templates', 'BUILD_INSTRUCTIONS.md');
+    const templateContent = jetpack.read(templatePath);
+    const instructions = template(templateContent, {
+      system: {
+        platform: platformName,
+        release: os.release(),
+        arch: os.arch(),
+        nodeVersion: process.version,
+      },
+    });
+
+    // Create source zip using git archive (respects .gitignore)
+    await execute(`git archive --format=zip --output=${sourceZipPath} HEAD`);
+
+    // Write build instructions to .temp/README.md
+    const tempReadmePath = path.join(process.cwd(), '.temp', 'README.md');
+    jetpack.write(tempReadmePath, instructions);
+
+    // Update the zip - replace README.md with build instructions
+    await execute(`cd .temp && zip -u ../${sourceZipPath} README.md`);
+
+    // Clean up temp file
+    jetpack.remove(tempReadmePath);
+
+    logger.log(`Source code zip created at ${sourceZipPath}`);
+  } catch (e) {
+    logger.error(`Error zipping source code`, e);
   }
 }
 
@@ -339,6 +407,9 @@ async function packageFn(complete) {
 
     // Run packageZip
     await packageZip();
+
+    // Run packageSource
+    await packageSource();
 
     // Run build:post hook
     await hook('build:post', index);

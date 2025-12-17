@@ -39,3 +39,14 @@
 [data-bs-theme="dark"] .text-adaptive {
   @extend .text-dark;
 }
+
+// ============================================
+// Text Decoration Utilities
+// ============================================
+.text-decoration-dotted {
+  text-decoration-style: dotted !important;
+}
+
+.text-decoration-dashed {
+  text-decoration-style: dashed !important;
+}

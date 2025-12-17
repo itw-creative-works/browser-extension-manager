@@ -95,6 +95,11 @@ async function updateManager() {
   const isUpToDate = version.is(installedVersion, '>=', latestVersion);
   const levelDifference = version.levelDifference(installedVersion, latestVersion);
 
+  // Check if installedVersion is truthy or throw error
+  if (!installedVersion) {
+    throw new Error(`No installed version of ${package.name} found in devDependencies.`);
+  }
+
   // Log
   logVersionCheck(package.name, installedVersion, latestVersion, isUpToDate);
 
@@ -172,6 +177,12 @@ function setupScripts() {
 function checkLocality() {
   const installedVersion = project.devDependencies[package.name];
 
+  // Check if installedVersion is truthy or throw error
+  if (!installedVersion) {
+    throw new Error(`No installed version of ${package.name} found in devDependencies.`);
+  }
+
+  // Warn if using local version
   if (installedVersion.startsWith('file:')) {
     logger.warn(`⚠️⚠️⚠️ You are using the local version of ${package.name}. This WILL NOT WORK when published. ⚠️⚠️⚠️`);
   }

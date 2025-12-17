@@ -9,6 +9,10 @@ const glob = require('glob').globSync;
 // Load package
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
+const projectRoot = Manager.getRootPath('project');
+
+// Load .env file from project root
+require('dotenv').config({ path: path.join(projectRoot, '.env') });
 
 // Log
 logger.log('Starting...', argv);
@@ -45,6 +49,7 @@ exports.build = series(
   parallel(exports.sass, exports.webpack, exports.icons, exports.html),
   exports.package,
   exports.audit,
+  exports.publish,
 );
 
 // Compose task scheduler

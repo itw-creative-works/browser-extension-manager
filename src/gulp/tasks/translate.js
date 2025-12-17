@@ -7,35 +7,34 @@ const path = require('path');
 const { execute } = require('node-powertools');
 const JSON5 = require('json5');
 
-// Languages to translate
-const LANGUAGES = [
-  'zh',
-  'es',
-  'hi',
-  'ar',
-  'pt',
-  'ru',
-  'ja',
-  'de',
-  'fr',
-  'ko',
-  'ur',
-  'id',
-  'bn',
-  'tl',
-  'vi',
-  'it',
-];
+// Locale config (shared with audit.js)
+const { limits: LOCALE_LIMITS, languages: LANGUAGES } = require('../config/locales.js');
 
 // Paths
 const localesDir = path.join(process.cwd(), 'src', '_locales');
 const enMessagesPath = path.join(localesDir, 'en', 'messages.json');
+
+// Check if Claude CLI is installed
+async function isClaudeInstalled() {
+  try {
+    await execute('which claude');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 // Main translate task
 async function translate(complete) {
   // Only run in build mode
   if (!Manager.isBuildMode()) {
     logger.log('Skipping translation (not in build mode)');
+    return complete();
+  }
+
+  // Check if Claude CLI is installed
+  if (!await isClaudeInstalled()) {
+    logger.log('Skipping translation (Claude CLI not installed)');
     return complete();
   }
 
@@ -64,7 +63,7 @@ async function translate(complete) {
   // Check which languages need translation
   const languagesToTranslate = [];
 
-  for (const lang of LANGUAGES) {
+  for (const lang of Object.keys(LANGUAGES)) {
     const langDir = path.join(localesDir, lang);
     const langMessagesPath = path.join(langDir, 'messages.json');
 
@@ -140,13 +139,21 @@ async function translate(complete) {
 async function translateAllWithClaude(enMessages, languagesToTranslate) {
   // Build language info for prompt
   const languageList = languagesToTranslate.map(({ lang }) =>
-    `- "${lang}": ${getLanguageName(lang)}`
+    `- "${lang}": ${LANGUAGES[lang]}`
   ).join('\n');
+
+  // Build character limits info
+  const limitsInfo = Object.entries(LOCALE_LIMITS)
+    .map(([field, limit]) => `- ${field}: max ${limit} characters`)
+    .join('\n');
 
   const prompt = `Translate the following Chrome extension messages.json content from English to multiple languages.
 
 TARGET LANGUAGES:
 ${languageList}
+
+CHARACTER LIMITS (Chrome Web Store requirements):
+${limitsInfo}
 
 IMPORTANT RULES:
 1. Only translate the "message" field values
@@ -154,7 +161,8 @@ IMPORTANT RULES:
 3. Keep all JSON keys exactly as they are
 4. Return ONLY valid JSON, no markdown, no explanation
 5. Preserve any placeholders like $1, $2, etc.
-6. Return a JSON object where each key is the language code and the value is the translated messages object
+6. IMPORTANT: Respect the character limits above for each field
+7. Return a JSON object where each key is the language code and the value is the translated messages object
 
 INPUT (English):
 ${JSON.stringify(enMessages, null, 2)}
@@ -207,30 +215,6 @@ Output the translated JSON:`;
     jetpack.remove(tempFile);
     throw new Error(`Claude CLI failed: ${e.message}`);
   }
-}
-
-// Get full language name
-function getLanguageName(code) {
-  const names = {
-    zh: 'Chinese (Simplified)',
-    es: 'Spanish',
-    hi: 'Hindi',
-    ar: 'Arabic',
-    pt: 'Portuguese',
-    ru: 'Russian',
-    ja: 'Japanese',
-    de: 'German',
-    fr: 'French',
-    ko: 'Korean',
-    ur: 'Urdu',
-    id: 'Indonesian',
-    bn: 'Bengali',
-    tl: 'Tagalog/Filipino',
-    vi: 'Vietnamese',
-    it: 'Italian',
-  };
-
-  return names[code] || code;
 }
 
 // Export task

@@ -4,7 +4,7 @@ const logger = Manager.logger('audit');
 const path = require('path');
 const jetpack = require('fs-jetpack');
 const { series } = require('gulp');
-const chalk = require('chalk');
+const chalk = require('chalk').default;
 
 // Load package
 const package = Manager.getPackage('main');
@@ -15,6 +15,7 @@ const rootPathProject = Manager.getRootPath('project');
 // Audit results tracker
 const auditResults = {
   externalScripts: [],
+  localeWarnings: [],
 };
 
 // Patterns to detect external script references
@@ -37,6 +38,44 @@ const EXTERNAL_SCRIPT_PATTERNS = [
   // Script loading from CDN base URLs (e.g., recaptcha, Google APIs)
   /["'](https?:\/\/(?:www\.)?(?:google\.com\/recaptcha|apis\.google\.com)[^"']*)["']/gi,
 ];
+
+// Locale config (shared with translate.js)
+const { limits: LOCALE_LIMITS } = require('../config/locales.js');
+
+// Check locale files for warnings
+function checkLocaleFiles(packagedDir) {
+  const localesDir = path.join(packagedDir, '_locales');
+
+  if (!jetpack.exists(localesDir)) {
+    return;
+  }
+
+  const localeFiles = jetpack.find(localesDir, { matching: '*/messages.json' });
+
+  localeFiles.forEach(filePath => {
+    try {
+      const content = jetpack.read(filePath);
+      const messages = JSON.parse(content);
+
+      // Check each field against its limit
+      Object.entries(LOCALE_LIMITS).forEach(([field, limit]) => {
+        const message = messages[field]?.message;
+
+        if (message && message.length > limit) {
+          auditResults.localeWarnings.push({
+            file: path.relative(rootPathProject, filePath),
+            field: field,
+            length: message.length,
+            limit: limit,
+            value: message,
+          });
+        }
+      });
+    } catch (e) {
+      logger.warn(`Error parsing locale file ${filePath}: ${e.message}`);
+    }
+  });
+}
 
 // Check a single file for external script references
 function checkFileForExternalScripts(filePath) {
@@ -86,6 +125,7 @@ async function auditFn(complete) {
 
   // Reset results
   auditResults.externalScripts = [];
+  auditResults.localeWarnings = [];
 
   try {
     // Find all files in packaged directory (JS, HTML, etc.)
@@ -100,13 +140,16 @@ async function auditFn(complete) {
 
     logger.log(`Auditing ${files.length} files (JS, HTML)...`);
 
-    // Check each file
+    // Check each file for external scripts
     files.forEach(filePath => {
       const externalScripts = checkFileForExternalScripts(filePath);
       if (externalScripts.length > 0) {
         auditResults.externalScripts.push(...externalScripts);
       }
     });
+
+    // Check locale files
+    checkLocaleFiles(packagedDir);
 
     // Display results
     displayAuditResults();
@@ -142,6 +185,23 @@ function displayAuditResults() {
     console.log(chalk.green('✅ No external scripts detected'));
   }
 
+  console.log('');
+
+  // Locale Warnings
+  if (auditResults.localeWarnings.length > 0) {
+    console.log(chalk.yellow.bold('⚠️  LOCALE FIELD LENGTH WARNINGS'));
+    console.log(chalk.gray('Some locale fields exceed recommended character limits.\n'));
+
+    auditResults.localeWarnings.forEach((item, index) => {
+      console.log(chalk.yellow(`  ${index + 1}. ${item.file}`));
+      console.log(chalk.gray(`     Field: ${item.field} (${item.length}/${item.limit} chars)`));
+      console.log(chalk.gray(`     Value: "${item.value}"`));
+      console.log('');
+    });
+  } else {
+    console.log(chalk.green('✅ All locale fields within limits'));
+  }
+
   // Summary
   console.log(chalk.bold('\n───────────────────────────────────────────────────'));
   console.log(chalk.bold('SUMMARY'));
@@ -150,6 +210,10 @@ function displayAuditResults() {
   const externalScriptCount = auditResults.externalScripts.length;
   const externalScriptColor = externalScriptCount > 0 ? chalk.red : chalk.green;
   console.log(externalScriptColor(`External Scripts: ${externalScriptCount}`));
+
+  const localeWarningCount = auditResults.localeWarnings.length;
+  const localeWarningColor = localeWarningCount > 0 ? chalk.yellow : chalk.green;
+  console.log(localeWarningColor(`Locale Warnings: ${localeWarningCount}`));
 
   console.log(chalk.bold('═══════════════════════════════════════════════════\n'));
 }

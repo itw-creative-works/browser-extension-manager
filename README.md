@@ -86,6 +86,115 @@ EDGE_API_KEY="your-api-key"
 
 Only stores with configured credentials will be published to.
 
+## 🔐 Authentication
+
+BEM provides built-in authentication support that syncs across all extension contexts (popup, options, pages, sidepanel, background).
+
+### Auth Architecture Overview
+
+**Background.js is the source of truth** for authentication state. When a user signs in via the website, the auth token flows through background.js to all other contexts via `chrome.storage`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SIGN-IN FLOW                                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│  1. User clicks .auth-signin-btn in any context                         │
+│  2. Extension opens https://{authDomain}/token?authSourceTabId=123      │
+│  3. Website authenticates user, redirects to /token?authToken=xxx       │
+│  4. Background.js detects URL via tabs.onUpdated listener               │
+│  5. Background signs in Firebase with custom token                      │
+│  6. Background saves auth state to chrome.storage (bxm:authState)       │
+│  7. Background closes /token tab and reactivates original tab           │
+│  8. Other contexts detect storage change and sign in their Firebase     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SIGN-OUT FLOW                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  1. User clicks .auth-signout-btn in any context                        │
+│  2. Web Manager signs out Firebase locally                              │
+│  3. Auth helper detects WM auth change, clears bxm:authState storage    │
+│  4. Background.js detects storage cleared, signs out its Firebase       │
+│  5. Other contexts detect storage change and sign out                   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Required Configuration
+
+Add `authDomain` to your Firebase config in `config/browser-extension-manager.json`:
+
+```json
+{
+  "firebaseConfig": {
+    "apiKey": "...",
+    "authDomain": "your-app.firebaseapp.com",
+    "projectId": "..."
+  }
+}
+```
+
+### Required Permission
+
+Add the `tabs` permission to your `src/manifest.json`:
+
+```json
+{
+  "permissions": ["tabs"]
+}
+```
+
+This is required for background.js to monitor tab URL changes and detect auth tokens.
+
+### Auth Button Classes
+
+Add these classes to your HTML elements to enable automatic auth handling:
+
+| Class | Description | Action |
+|-------|-------------|--------|
+| `.auth-signin-btn` | Sign in button | Opens `/token` page on website |
+| `.auth-signout-btn` | Sign out button | Signs out via Web Manager (which triggers storage sync) |
+| `.auth-account-btn` | Account button | Opens `/account` page on website |
+
+### Example
+```html
+<!-- Sign In Button (shown when logged out) -->
+<button class="btn auth-signin-btn" data-wm-bind="@show !auth.user">
+  Sign In
+</button>
+
+<!-- Account Section (shown when logged in) -->
+<div data-wm-bind="@show auth.user" hidden>
+  <span data-wm-bind="@text auth.user.displayName">User</span>
+  <a class="auth-account-btn" href="#">Account</a>
+  <button class="auth-signout-btn">Sign Out</button>
+</div>
+```
+
+### Reactive Bindings
+- `data-wm-bind="@show auth.user"` - Show when logged in
+- `data-wm-bind="@show !auth.user"` - Show when logged out
+- `data-wm-bind="@text auth.user.displayName"` - Display user's name
+- `data-wm-bind="@text auth.user.email"` - Display user's email
+- `data-wm-bind="@attr src auth.user.photoURL"` - Set avatar image src
+
+### Storage Key
+
+Auth state is stored in `chrome.storage` under the key `bxm:authState`:
+
+```javascript
+{
+  token: "firebase-custom-token",
+  user: {
+    uid: "...",
+    email: "...",
+    displayName: "...",
+    photoURL: "...",
+    emailVerified: true
+  },
+  timestamp: 1234567890
+}
+```
+
 <!-- ## ⛳️ Flags
 * `--test=false` - Coming soon
 ```bash
