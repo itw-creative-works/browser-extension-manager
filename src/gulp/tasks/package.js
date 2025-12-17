@@ -351,6 +351,14 @@ async function packageRaw() {
   }
 }
 
+// Files to exclude from packaged output (development/source files)
+const PACKAGE_EXCLUDE_PATTERNS = [
+  '**/*.scss',
+  '**/*.sass',
+  '**/*.ts',
+  '**/.DS_Store',
+];
+
 // Package raw for a specific target (chromium or firefox)
 async function packageRawForTarget(target) {
   logger.log(`[${target}] Starting raw packaging...`);
@@ -362,6 +370,13 @@ async function packageRawForTarget(target) {
 
   // Copy files to raw package directory
   await execute(`cp -r dist/* ${outputDir}`);
+
+  // Remove development/source files that shouldn't be in the package
+  const filesToRemove = jetpack.find(outputDir, { matching: PACKAGE_EXCLUDE_PATTERNS });
+  filesToRemove.forEach(file => {
+    jetpack.remove(file);
+    logger.log(`[${target}] Removed dev file: ${path.relative(outputDir, file)}`);
+  });
 
   // Loop thru outputDir/assets/js all JS files for redactions
   const jsFiles = jetpack.find(path.join(outputDir, 'assets', 'js'), { matching: '*.js' });

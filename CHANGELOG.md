@@ -32,6 +32,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `audit.js` audits chromium build (code is identical between targets)
 - Manifest compilation now uses 3-step process: apply defaults → target adjustments → cleanup
 
+### Fixed
+- Packaged extensions no longer include `.scss`, `.sass`, `.ts`, or `.DS_Store` files (caused store rejections)
+
 ## [1.1.13] - 2025-11-26
 ### Added
 - Default `.env` file with publish credential templates for all stores
