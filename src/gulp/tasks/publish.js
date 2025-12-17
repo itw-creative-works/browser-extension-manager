@@ -19,6 +19,10 @@ const PATHS = {
     zip: path.join(process.cwd(), 'packaged', 'firefox', 'extension.zip'),
     raw: path.join(process.cwd(), 'packaged', 'firefox', 'raw'),
   },
+  opera: {
+    zip: path.join(process.cwd(), 'packaged', 'opera', 'extension.zip'),
+    raw: path.join(process.cwd(), 'packaged', 'opera', 'raw'),
+  },
 };
 
 // Helper to check if a credential is valid (not empty or placeholder)
@@ -50,7 +54,14 @@ const STORES = {
     name: 'Opera Add-ons',
     submitUrl: 'https://addons.opera.com/developer/',
     apiUrl: null,
-    enabled: () => false,
+    enabled: () => false, // No API available
+  },
+  brave: {
+    name: 'Brave (via Chrome Web Store)',
+    submitUrl: 'https://chrome.google.com/webstore/devconsole',
+    apiUrl: null,
+    enabled: () => false, // Uses Chrome Web Store - no separate store
+    note: 'Brave uses Chrome Web Store directly. Publishing to Chrome makes extension available in Brave.',
   },
 };
 
@@ -91,7 +102,13 @@ async function publish(complete) {
     Object.entries(STORES).forEach(([, store]) => {
       logger.log(`  ${store.name}:`);
       logger.log(`    Submit: ${store.submitUrl}`);
-      logger.log(`    API:    ${store.apiUrl || 'N/A (manual submission only)'}`);
+      if (store.apiUrl) {
+        logger.log(`    API:    ${store.apiUrl}`);
+      } else if (store.note) {
+        logger.log(`    Note:   ${store.note}`);
+      } else {
+        logger.log(`    API:    N/A (manual submission only)`);
+      }
     });
     throw new Error('No stores configured for publishing');
   }
@@ -137,10 +154,14 @@ async function publish(complete) {
       status = '✓ Published';
     } else if (results.failed.includes(key)) {
       status = '✗ Failed';
+    } else if (store.note) {
+      status = '○ ' + store.note.split('.')[0]; // First sentence of note
     }
     logger.log(`  ${store.name}: ${status}`);
     logger.log(`    Submit: ${store.submitUrl}`);
-    logger.log(`    API:    ${store.apiUrl || 'N/A (manual submission only)'}`);
+    if (store.apiUrl) {
+      logger.log(`    API:    ${store.apiUrl}`);
+    }
   });
 
   // Throw error if any failed

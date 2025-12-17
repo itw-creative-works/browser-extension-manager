@@ -304,7 +304,7 @@ class Manager {
     if (user) {
       // User is signed in - get current stored state to preserve token
       const result = await new Promise(resolve =>
-        this.extension.storage.get('bxm:authState', resolve)
+        this.extension.storage.local.get('bxm:authState', resolve)
       );
       const currentState = result['bxm:authState'] || {};
 
@@ -321,11 +321,11 @@ class Manager {
         timestamp: Date.now(),
       };
 
-      await this.extension.storage.set({ 'bxm:authState': authState });
+      await this.extension.storage.local.set({ 'bxm:authState': authState });
       this.logger.log('[AUTH] Auth state synced to storage');
     } else {
       // User is signed out - clear storage
-      await this.extension.storage.remove('bxm:authState');
+      await this.extension.storage.local.remove('bxm:authState');
       this.logger.log('[AUTH] Auth state cleared from storage');
     }
   }
@@ -349,11 +349,11 @@ class Manager {
 
       // Save token to storage (user state will be synced by onAuthStateChanged)
       const result = await new Promise(resolve =>
-        this.extension.storage.get('bxm:authState', resolve)
+        this.extension.storage.local.get('bxm:authState', resolve)
       );
       const currentState = result['bxm:authState'] || {};
 
-      await this.extension.storage.set({
+      await this.extension.storage.local.set({
         'bxm:authState': {
           ...currentState,
           token: token,

@@ -111,15 +111,6 @@ function Extension () {
     }
   } catch (e) {}
 
-  // Fix storage
-  if (self.storage) {
-    if (self.storage.sync) {
-      self.storage = self.storage.sync
-    } else if (self.storage.local) {
-      self.storage = self.storage.local
-    }
-  }
-
   // Return the object
   return self;
 }

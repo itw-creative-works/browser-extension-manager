@@ -18,16 +18,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.3.0] - 2025-12-16
 
 ### Added
-- Multi-target builds for Chromium and Firefox with automatic manifest adjustments
+- Multi-target builds for Chromium, Firefox, and Opera with automatic manifest adjustments
 - Chromium build uses `background.service_worker`, Firefox build uses `background.scripts`
-- Edge loading instructions in BUILD_INSTRUCTIONS.md
+- Opera build auto-resolves `__MSG_*__` placeholders in `short_name` (Opera enforces 12-char limit including placeholder text)
+- Browser-specific `TARGETS` config object with `adjustManifest()` functions for each target
+- Opera loading instructions in BUILD_INSTRUCTIONS.md
 
 ### Changed
-- Packaged output structure changed from `packaged/raw/` to `packaged/{chromium,firefox}/raw/`
-- Extension zip moved from `packaged/extension.zip` to `packaged/{chromium,firefox}/extension.zip`
-- `package.js` now creates separate builds for each browser target
-- `publish.js` uses target-specific paths (chromium zip for Chrome/Edge, firefox raw for Firefox)
+- Packaged output structure changed from `packaged/raw/` to `packaged/{chromium,firefox,opera}/raw/`
+- Extension zip moved from `packaged/extension.zip` to `packaged/{chromium,firefox,opera}/extension.zip`
+- `package.js` now creates separate builds for each browser target using configurable `TARGETS` object
+- `publish.js` uses target-specific paths (chromium zip for Chrome/Edge, firefox raw for Firefox, opera zip for Opera)
 - `audit.js` audits chromium build (code is identical between targets)
+- Manifest compilation now uses 3-step process: apply defaults → target adjustments → cleanup
 
 ## [1.1.13] - 2025-11-26
 ### Added

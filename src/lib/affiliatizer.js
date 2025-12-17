@@ -112,7 +112,7 @@ Affiliatizer.get = function () {
 Affiliatizer.initialize = async function (Manager) {
   // Shortcuts
   const { extension, logger } = Manager;
-  const { storage } = extension;
+  const storage = extension.storage.local;
 
   // Parse the URL
   const url = new URL(window.location.href);

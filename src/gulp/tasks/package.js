@@ -152,8 +152,97 @@ function getPackageVersion(packageName) {
   }
 }
 
-// Build targets
-const TARGETS = ['chromium', 'firefox'];
+// Build targets with browser-specific configurations
+const TARGETS = {
+  chromium: {
+    // Chrome, Edge, Brave, etc. - uses service_worker
+    adjustManifest: (manifest) => {
+      if (manifest.background) {
+        delete manifest.background.scripts;
+      }
+      return manifest;
+    },
+  },
+  firefox: {
+    // Firefox - uses scripts array, no service_worker
+    adjustManifest: (manifest) => {
+      if (manifest.background) {
+        if (manifest.background.service_worker) {
+          if (!manifest.background.scripts) {
+            manifest.background.scripts = [manifest.background.service_worker];
+          }
+          delete manifest.background.service_worker;
+        }
+      }
+      return manifest;
+    },
+  },
+  opera: {
+    // Opera - like chromium but with stricter requirements
+    // Opera enforces 12-char limit on short_name INCLUDING placeholder text
+    adjustManifest: (manifest) => {
+      // Same as chromium for background
+      if (manifest.background) {
+        delete manifest.background.scripts;
+      }
+
+      // Opera requires static short_name (12 char limit includes placeholder text)
+      // __MSG_appNameShort__ is 19 chars, so we must use actual value
+      if (manifest.short_name && manifest.short_name.startsWith('__MSG_')) {
+        // Try to get the value from default locale
+        const localesDir = path.join('dist', '_locales');
+        const defaultLocale = manifest.default_locale || 'en';
+        const messagesPath = path.join(localesDir, defaultLocale, 'messages.json');
+
+        if (jetpack.exists(messagesPath)) {
+          try {
+            const messages = JSON5.parse(jetpack.read(messagesPath));
+            // Extract key from __MSG_keyName__
+            const key = manifest.short_name.replace(/^__MSG_/, '').replace(/__$/, '');
+            if (messages[key]?.message) {
+              manifest.short_name = messages[key].message;
+              logger.log(`[opera] Resolved short_name to "${manifest.short_name}"`);
+            }
+          } catch (e) {
+            logger.warn(`[opera] Could not resolve short_name from locale: ${e.message}`);
+          }
+        }
+      }
+
+      return manifest;
+    },
+  },
+};
+
+// Recursively remove empty arrays and objects from an object
+function removeEmptyValues(obj) {
+  if (Array.isArray(obj)) {
+    return obj;
+  }
+
+  if (obj && typeof obj === 'object') {
+    const result = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Recursively clean nested objects
+      const cleaned = removeEmptyValues(value);
+
+      // Skip empty arrays
+      if (Array.isArray(cleaned) && cleaned.length === 0) {
+        continue;
+      }
+
+      // Skip empty objects (after cleaning)
+      if (cleaned && typeof cleaned === 'object' && !Array.isArray(cleaned) && Object.keys(cleaned).length === 0) {
+        continue;
+      }
+
+      result[key] = cleaned;
+    }
+    return result;
+  }
+
+  return obj;
+}
 
 // Special Compilation Task for manifest.json with default settings
 async function compileManifest(outputDir, target) {
@@ -163,10 +252,12 @@ async function compileManifest(outputDir, target) {
     const configPath = path.join(rootPathPackage, 'dist', 'config', 'manifest.json');
 
     // Read and parse using JSON5
-    const manifest = JSON5.parse(jetpack.read(manifestPath));
+    let manifest = JSON5.parse(jetpack.read(manifestPath));
     const defaultConfig = JSON5.parse(jetpack.read(configPath));
 
-    // Apply defaults
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 1: Apply defaults (shared across all targets)
+    // ═══════════════════════════════════════════════════════════════════════════
     getKeys(defaultConfig).forEach(key => {
       const defaultValue = key.split('.').reduce((o, k) => (o || {})[k], defaultConfig);
       const userValue = key.split('.').reduce((o, k) => (o || {})[k], manifest);
@@ -192,25 +283,22 @@ async function compileManifest(outputDir, target) {
     // Add package version to manifest
     manifest.version = project.version;
 
-    // Apply target-specific manifest adjustments
-    if (manifest.background) {
-      if (target === 'chromium') {
-        // Chrome/Edge uses service_worker only
-        delete manifest.background.scripts;
-      } else if (target === 'firefox') {
-        // Firefox uses scripts array only
-        if (manifest.background.service_worker) {
-          // Ensure scripts array exists (derive from service_worker if needed)
-          if (!manifest.background.scripts) {
-            manifest.background.scripts = [manifest.background.service_worker];
-          }
-          delete manifest.background.service_worker;
-        }
-      }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 2: Apply target-specific adjustments
+    // ═══════════════════════════════════════════════════════════════════════════
+    const targetConfig = TARGETS[target];
+    if (targetConfig?.adjustManifest) {
+      manifest = targetConfig.adjustManifest(manifest);
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 3: Clean up (shared across all targets)
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Remove empty arrays and objects from manifest
+    const cleanedManifest = removeEmptyValues(manifest);
+
     // Save as regular JSON
-    jetpack.write(outputPath, JSON.stringify(manifest, null, 2));
+    jetpack.write(outputPath, JSON.stringify(cleanedManifest, null, 2));
 
     logger.log(`[${target}] Manifest compiled with defaults`);
   } catch (e) {
@@ -245,14 +333,14 @@ async function compileLocales(outputDir) {
   }
 }
 
-// Package Task for raw - creates both chromium and firefox builds
+// Package Task for raw - creates builds for all browser targets
 async function packageRaw() {
   // Log
   logger.log(`Starting raw packaging...`);
 
   try {
     // Build for each target
-    for (const target of TARGETS) {
+    for (const target of Object.keys(TARGETS)) {
       await packageRawForTarget(target);
     }
 
@@ -320,7 +408,7 @@ async function packageZip() {
 
   try {
     // Create zip for each target
-    for (const target of TARGETS) {
+    for (const target of Object.keys(TARGETS)) {
       const inputDir = `packaged/${target}/raw`;
       const zipPath = `packaged/${target}/extension.zip`;
 

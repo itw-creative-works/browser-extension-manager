@@ -29,7 +29,7 @@ async function signInWithStoredToken(context, authState) {
     // If token is invalid/expired, clear the auth state
     if (error.code === 'auth/invalid-custom-token' || error.code === 'auth/custom-token-expired') {
       logger.log('[AUTH-SYNC] Token expired, clearing auth state');
-      context.extension.storage.remove('bxm:authState');
+      context.extension.storage.local.remove('bxm:authState');
     }
   }
 }
@@ -43,7 +43,7 @@ export function setupAuthStorageListener(context) {
   const { extension, webManager, logger } = context;
 
   // Check existing auth state on load and sign in
-  extension.storage.get('bxm:authState', (result) => {
+  extension.storage.local.get('bxm:authState', (result) => {
     const authState = result['bxm:authState'];
 
     if (authState?.token) {
@@ -58,7 +58,7 @@ export function setupAuthStorageListener(context) {
     if (!state.user) {
       // User signed out - clear storage so all contexts sync
       logger.log('[AUTH-SYNC] WM auth signed out, clearing storage...');
-      extension.storage.remove('bxm:authState');
+      extension.storage.local.remove('bxm:authState');
     }
   });
 
