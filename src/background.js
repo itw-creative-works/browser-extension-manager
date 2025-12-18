@@ -476,6 +476,30 @@ function setupGlobalHandlers() {
     serviceWorker.skipWaiting();
   });
 
+  // Handle extension install/update
+  extension.runtime.onInstalled.addListener((details) => {
+    // Only open tab on fresh install (not updates)
+    if (details.reason !== 'install') {
+      return;
+    }
+
+    // Get website URL from config
+    const config = serviceWorker.BEM_BUILD_JSON?.config || {};
+    const website = config?.brand?.url;
+
+    // Skip if no website configured
+    if (!website) {
+      console.log('[INSTALL] No website configured, skipping install page');
+      return;
+    }
+
+    // Open the installed page
+    const installedUrl = `https://${website}/extension/installed`;
+    console.log('[INSTALL] Opening install page:', installedUrl);
+
+    extension.tabs.create({ url: installedUrl });
+  });
+
   serviceWorker.addEventListener('activate', (event) => {
     event.waitUntil(serviceWorker.clients.claim());
   });
