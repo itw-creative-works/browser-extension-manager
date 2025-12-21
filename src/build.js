@@ -44,7 +44,8 @@ Manager.getArguments = function () {
 
   // Fix
   options._ = options._ || [];
-  options.browser = force(options.browser === undefined ? true : options.browser, 'boolean');
+  // browser can be: true (all), false (none), or a string like 'chrome' or 'chrome,firefox'
+  options.browser = options.browser === undefined ? true : options.browser;
   options.debug = force(options.debug === undefined ? false : options.debug, 'boolean');
 
   // Return

@@ -494,7 +494,7 @@ function setupGlobalHandlers() {
     }
 
     // Open the installed page
-    const installedUrl = `https://${website}/extension/installed`;
+    const installedUrl = `${website}/extension/installed`;
     console.log('[INSTALL] Opening install page:', installedUrl);
 
     extension.tabs.create({ url: installedUrl });

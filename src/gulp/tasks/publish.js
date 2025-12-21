@@ -1,6 +1,7 @@
 // Libraries
 const Manager = new (require('../../build.js'));
 const logger = Manager.logger('publish');
+const argv = Manager.getArguments();
 const { series } = require('gulp');
 const jetpack = require('fs-jetpack');
 const path = require('path');
@@ -8,6 +9,30 @@ const { execute } = require('node-powertools');
 
 // Load package
 const project = Manager.getPackage('project');
+
+// Helper to parse browser filter from --browser flag or BXM_BROWSER env var
+// Returns array of browser names to publish to, or null for all
+function getBrowserFilter() {
+  // Check env var first (works across npm && chains), then CLI arg
+  const browser = process.env.BXM_BROWSER || argv.browser;
+
+  // If true or undefined, publish to all
+  if (browser === true || browser === undefined) {
+    return null;
+  }
+
+  // If false, publish to none
+  if (browser === false) {
+    return [];
+  }
+
+  // If string, parse comma-separated list
+  if (typeof browser === 'string') {
+    return browser.split(',').map((b) => b.trim().toLowerCase());
+  }
+
+  return null;
+}
 
 // Paths for each target
 const PATHS = {
@@ -89,27 +114,53 @@ async function publish(complete) {
   // Log version
   logger.log(`Publishing version ${project.version}`);
 
-  // Get enabled stores
+  // Get browser filter from --browser flag
+  const browserFilter = getBrowserFilter();
+
+  // Log filter if applied
+  if (browserFilter) {
+    logger.log(`Browser filter: ${browserFilter.join(', ') || 'none'}`);
+  }
+
+  // Get enabled stores (filtered by --browser flag if provided)
   const enabledStores = Object.entries(STORES)
-    .filter(([, store]) => store.enabled())
+    .filter(([key, store]) => {
+      // Check if store is enabled via credentials
+      if (!store.enabled()) {
+        return false;
+      }
+
+      // If no filter, include all enabled stores
+      if (!browserFilter) {
+        return true;
+      }
+
+      // Check if this store is in the filter
+      return browserFilter.includes(key);
+    })
     .map(([key]) => key);
 
-  // If no stores are configured, error and show all store info
+  // If no stores to publish to
   if (enabledStores.length === 0) {
-    logger.error('No stores configured for publishing. Add credentials to .env file');
-    logger.log('');
-    logger.log('Store URLs and API documentation:');
-    Object.entries(STORES).forEach(([, store]) => {
-      logger.log(`  ${store.name}:`);
-      logger.log(`    Submit: ${store.submitUrl}`);
-      if (store.apiUrl) {
-        logger.log(`    API:    ${store.apiUrl}`);
-      } else if (store.note) {
-        logger.log(`    Note:   ${store.note}`);
-      } else {
-        logger.log(`    API:    N/A (manual submission only)`);
-      }
-    });
+    // Check if it's because of filter or missing credentials
+    if (browserFilter && browserFilter.length > 0) {
+      logger.error(`No matching stores for --browser=${browserFilter.join(',')}. Available: chrome, firefox, edge`);
+    } else {
+      logger.error('No stores configured for publishing. Add credentials to .env file');
+      logger.log('');
+      logger.log('Store URLs and API documentation:');
+      Object.entries(STORES).forEach(([, store]) => {
+        logger.log(`  ${store.name}:`);
+        logger.log(`    Submit: ${store.submitUrl}`);
+        if (store.apiUrl) {
+          logger.log(`    API:    ${store.apiUrl}`);
+        } else if (store.note) {
+          logger.log(`    Note:   ${store.note}`);
+        } else {
+          logger.log(`    API:    N/A (manual submission only)`);
+        }
+      });
+    }
     throw new Error('No stores configured for publishing');
   }
 
@@ -220,21 +271,29 @@ async function publishToFirefox() {
     throw new Error('Missing Firefox credentials. Set FIREFOX_API_KEY, FIREFOX_API_SECRET in .env');
   }
 
-  logger.log('[firefox] Uploading to Firefox Add-ons...');
+  // Log what we're doing
+  if (extensionId) {
+    logger.log(`[firefox] Updating existing add-on: ${extensionId}`);
+  } else {
+    logger.log('[firefox] Creating new add-on (no FIREFOX_EXTENSION_ID set)');
+    logger.log('[firefox] After publish, add FIREFOX_EXTENSION_ID to .env for future updates');
+  }
 
   // Use web-ext sign with firefox build
+  // --approval-timeout=0 to skip waiting for approval (can take minutes to hours)
   const command = [
     'npx web-ext sign',
     `--source-dir "${PATHS.firefox.raw}"`,
     `--api-key "${apiKey}"`,
     `--api-secret "${apiSecret}"`,
     `--channel "${channel}"`,
+    '--approval-timeout 0', // Don't wait for approval - it can take hours
     extensionId ? `--id "${extensionId}"` : '',
   ].filter(Boolean).join(' ');
 
   await execute(command);
 
-  logger.log('[firefox] Upload complete');
+  logger.log('[firefox] Upload complete (approval may take time)');
 }
 
 // Publish to Microsoft Edge Add-ons
