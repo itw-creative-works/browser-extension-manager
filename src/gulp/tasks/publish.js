@@ -281,9 +281,12 @@ async function publishToFirefox() {
 
   // Use web-ext sign with firefox build
   // --approval-timeout=0 to skip waiting for approval (can take minutes to hours)
+  // --artifacts-dir to prevent leaving web-ext-artifacts folder in project root
+  const artifactsDir = path.join(process.cwd(), '.temp', 'web-ext-artifacts');
   const command = [
     'npx web-ext sign',
     `--source-dir "${PATHS.firefox.raw}"`,
+    `--artifacts-dir "${artifactsDir}"`,
     `--api-key "${apiKey}"`,
     `--api-secret "${apiSecret}"`,
     `--channel "${channel}"`,
@@ -292,6 +295,9 @@ async function publishToFirefox() {
   ].filter(Boolean).join(' ');
 
   await execute(command);
+
+  // Clean up artifacts dir
+  jetpack.remove(artifactsDir);
 
   logger.log('[firefox] Upload complete (approval may take time)');
 }
@@ -308,39 +314,57 @@ async function publishToEdge() {
     throw new Error('Missing Edge credentials. Set EDGE_PRODUCT_ID, EDGE_CLIENT_ID, EDGE_API_KEY in .env');
   }
 
+  // Helper for Edge API requests
+  const edgeHeaders = {
+    'Authorization': `ApiKey ${apiKey}`,
+    'X-ClientID': clientId,
+  };
+
+  // Helper to parse Edge API response (handles empty bodies)
+  async function parseEdgeResponse(response, label) {
+    const text = await response.text();
+    logger.log(`[edge] ${label} - Status: ${response.status}, Body: ${text || '(empty)'}`);
+
+    if (!text) {
+      return { status: response.status, data: null };
+    }
+
+    try {
+      return { status: response.status, data: JSON.parse(text) };
+    } catch (e) {
+      return { status: response.status, data: text };
+    }
+  }
+
+  // Step 1: Upload the package first
   logger.log('[edge] Uploading to Microsoft Edge Add-ons...');
 
-  // Read chromium zip file (Edge uses same build as Chrome)
   const zipBuffer = jetpack.read(PATHS.chromium.zip, 'buffer');
-
-  // Edge API v1.1 endpoint
   const uploadUrl = `https://api.addons.microsoftedge.microsoft.com/v1/products/${productId}/submissions/draft/package`;
 
-  // Upload using fetch
-  const response = await fetch(uploadUrl, {
+  const uploadResponse = await fetch(uploadUrl, {
     method: 'POST',
     headers: {
-      'Authorization': `ApiKey ${apiKey}`,
-      'X-ClientID': clientId,
+      ...edgeHeaders,
       'Content-Type': 'application/zip',
     },
     body: zipBuffer,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Edge API error: ${response.status} - ${errorText}`);
+  const upload = await parseEdgeResponse(uploadResponse, 'Upload response');
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Edge upload error: ${upload.status} - ${JSON.stringify(upload.data)}`);
   }
 
   logger.log('[edge] Package uploaded, submitting for review...');
 
-  // Submit for review
+  // Step 2: Submit for review - this is where we'll get InProgressSubmission if there's a pending review
   const publishUrl = `https://api.addons.microsoftedge.microsoft.com/v1/products/${productId}/submissions`;
   const publishResponse = await fetch(publishUrl, {
     method: 'POST',
     headers: {
-      'Authorization': `ApiKey ${apiKey}`,
-      'X-ClientID': clientId,
+      ...edgeHeaders,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -348,9 +372,33 @@ async function publishToEdge() {
     }),
   });
 
+  const publish = await parseEdgeResponse(publishResponse, 'Publish response');
+
+  // Check for HTTP errors (4xx, 5xx)
   if (!publishResponse.ok) {
-    const errorText = await publishResponse.text();
-    throw new Error(`Edge publish error: ${publishResponse.status} - ${errorText}`);
+    // Check if it's a 409 Conflict or similar indicating in-progress submission
+    if (publish.status === 409) {
+      throw new Error('Extension already has a pending submission in review. Wait for it to complete before publishing again.');
+    }
+    throw new Error(`Edge publish error: ${publish.status} - ${JSON.stringify(publish.data)}`);
+  }
+
+  // Check for API-level failures (HTTP 200/202 but status: "Failed" in body)
+  if (publish.data && typeof publish.data === 'object') {
+    if (publish.data.status === 'Failed') {
+      if (publish.data.errorCode === 'InProgressSubmission') {
+        throw new Error('Extension already has a pending submission in review. Wait for it to complete before publishing again.');
+      }
+      if (publish.data.errorCode === 'UnpublishInProgress') {
+        throw new Error('Extension is being unpublished. Wait for unpublish to complete before publishing.');
+      }
+      throw new Error(`Edge publish failed: ${publish.data.message || publish.data.errorCode || 'Unknown error'}`);
+    }
+  }
+
+  // HTTP 202 Accepted means submission was queued successfully
+  if (publish.status === 202) {
+    logger.log('[edge] Submission accepted and queued for review');
   }
 
   logger.log('[edge] Upload complete');

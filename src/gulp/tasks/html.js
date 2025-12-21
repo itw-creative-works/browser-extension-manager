@@ -105,6 +105,15 @@ function processHtml(templateContent) {
       };
 
       // Apply template with custom brackets
+      // First, template the body content to replace any {{ }} placeholders in the view
+      const templatedBody = template(bodyContent, data, {
+        brackets: ['{{', '}}'],
+      });
+
+      // Update data with templated body
+      data.content = templatedBody;
+
+      // Then template the outer page template
       const rendered = template(templateContent, data, {
         brackets: ['{{', '}}'],
       });

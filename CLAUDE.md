@@ -209,8 +209,33 @@ When adding a new component type to the framework:
 - **distribute** ([gulp/tasks/distribute.js](src/gulp/tasks/distribute.js)) - Copies project files to `dist/`
 - **sass** ([gulp/tasks/sass.js](src/gulp/tasks/sass.js)) - Compiles SCSS with sophisticated load path system
 - **webpack** ([gulp/tasks/webpack.js](src/gulp/tasks/webpack.js)) - Bundles JavaScript with Babel
-- **html** ([gulp/tasks/html.js](src/gulp/tasks/html.js)) - Processes HTML views into templates
+- **html** ([gulp/tasks/html.js](src/gulp/tasks/html.js)) - Processes HTML views into templates (see HTML Templating below)
 - **package** ([gulp/tasks/package.js](src/gulp/tasks/package.js)) - Creates packaged extension
+
+### HTML Templating
+
+HTML views in `src/views/` are processed through a two-step templating system using `{{ }}` brackets.
+
+**Available variables:**
+- `{{ brand.name }}` - Brand name from config
+- `{{ brand.url }}` - Brand URL from config
+- `{{ page.name }}` - Component name (e.g., `popup`, `pages/index`)
+- `{{ page.path }}` - Full view path
+- `{{ page.title }}` - Page title (defaults to brand name)
+- `{{ theme.appearance }}` - Theme appearance (`dark` or `light`)
+- `{{ cacheBust }}` - Cache-busting timestamp
+
+**Example usage in views:**
+```html
+<a href="{{ brand.url }}/pricing">Upgrade to Premium</a>
+<p>Welcome to {{ brand.name }}</p>
+```
+
+**How it works:**
+1. Your view file (`src/views/[component]/index.html`) is templated first
+2. The result is injected into [page-template.html](src/config/page-template.html)
+3. The outer template is processed with the same variables
+
 - **serve** ([gulp/tasks/serve.js](src/gulp/tasks/serve.js)) - WebSocket server for live reload
 
 ### Modifying Themes
