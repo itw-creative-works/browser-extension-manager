@@ -201,19 +201,6 @@ export function setupAuthEventListeners(context) {
     openAuthPage(context);
   });
 
-  // Account button (.auth-account-btn) - opens account page on website
-  document.addEventListener('click', (event) => {
-    const $accountBtn = event.target.closest('.auth-account-btn');
-    if (!$accountBtn) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    openAuthPage(context, { path: '/account' });
-  });
-
   // Note: .auth-signout-btn is handled by web-manager's auth module
   // setupSignOutListener detects sign-out and notifies background
 
