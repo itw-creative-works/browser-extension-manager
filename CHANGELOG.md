@@ -15,6 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.3.17] - 2025-12-23
+### Changed
+- Auth system now uses messaging instead of `chrome.storage` for cross-context sync
+- Background.js is the source of truth; contexts sync via `bxm:syncAuth` message on load
+- Fresh custom tokens fetched from server only when context UID differs from background UID
+
+### Fixed
+- Auth failures caused by expired custom tokens (tokens no longer stored, fetched fresh when needed)
+
 ## [1.3.0] - 2025-12-16
 
 ### Added

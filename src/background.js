@@ -65,8 +65,8 @@ class Manager {
     // Setup auth token listener (for cross-runtime auth)
     this.setupAuthTokenListener();
 
-    // Setup auth storage listener (detect sign-out from pages)
-    this.setupAuthStorageListener();
+    // Initialize Firebase auth on startup (restores persisted session if any)
+    this.initializeAuth();
 
     // Setup livereload
     this.setupLiveReload();
@@ -120,8 +120,145 @@ class Manager {
       }
     });
 
+    // Listen for runtime messages (from popup, options, pages, etc.)
+    this.extension.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      // Handle auth sync requests - contexts ask background for auth state on load
+      if (message.command === 'bxm:syncAuth') {
+        this.handleSyncAuth(message, sendResponse);
+        return true; // Keep channel open for async response
+      }
+
+      // Handle sign-out requests from contexts
+      if (message.command === 'bxm:signOut') {
+        this.handleSignOut(sendResponse);
+        return true; // Keep channel open for async response
+      }
+    });
+
     // Log
     this.logger.log('Set up message handlers');
+  }
+
+  // Handle auth sync request from other contexts (popup, page, options, sidepanel)
+  // Compares context's UID with background's UID and provides fresh token only if different
+  async handleSyncAuth(message, sendResponse) {
+    try {
+      const contextUid = message.contextUid || null; // UID from asking context (or null)
+
+      // Get or initialize Firebase auth
+      const auth = this.getFirebaseAuth();
+      const bgUser = auth.currentUser;
+      const bgUid = bgUser?.uid || null;
+
+      this.logger.log('[AUTH] syncAuth: Comparing UIDs - context:', contextUid, 'background:', bgUid);
+
+      // Already in sync (both null, or same UID)
+      if (contextUid === bgUid) {
+        this.logger.log('[AUTH] syncAuth: Already in sync');
+        sendResponse({ needsSync: false });
+        return;
+      }
+
+      // Context is signed in but background is not → context should sign out
+      if (!bgUser && contextUid) {
+        this.logger.log('[AUTH] syncAuth: Background signed out, telling context to sign out');
+        sendResponse({ needsSync: true, signOut: true });
+        return;
+      }
+
+      // Background is signed in, context is not (or different user) → provide token
+      this.logger.log('[AUTH] syncAuth: Fetching fresh custom token for context...', bgUser.email);
+
+      // Get API URL from config
+      const apiUrl = this.config?.web_manager?.api?.url || 'https://api.itwcreativeworks.com';
+
+      // Get fresh ID token for authorization
+      const idToken = await bgUser.getIdToken(true);
+
+      // Fetch fresh custom token from server
+      const response = await fetch(`${apiUrl}/backend-manager`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          command: 'user:create-custom-token',
+          payload: {},
+        }),
+      });
+
+      // Check response
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      // Parse response
+      const data = await response.json();
+
+      // Check for token in response
+      if (!data.response?.token) {
+        throw new Error('No token in server response');
+      }
+
+      this.logger.log('[AUTH] syncAuth: Got fresh custom token, sending to context');
+
+      // Send user info and fresh custom token
+      sendResponse({
+        needsSync: true,
+        customToken: data.response.token,
+        user: {
+          uid: bgUser.uid,
+          email: bgUser.email,
+          displayName: bgUser.displayName,
+          photoURL: bgUser.photoURL,
+          emailVerified: bgUser.emailVerified,
+        },
+      });
+
+    } catch (error) {
+      this.logger.error('[AUTH] syncAuth error:', error.message);
+      sendResponse({ needsSync: false, error: error.message });
+    }
+  }
+
+  // Handle sign-out request from a context
+  // Signs out background's Firebase and broadcasts to all other contexts
+  async handleSignOut(sendResponse) {
+    try {
+      this.logger.log('[AUTH] handleSignOut: Signing out background Firebase...');
+
+      // Sign out background's Firebase
+      if (this.libraries.firebaseAuth?.currentUser) {
+        await this.libraries.firebaseAuth.signOut();
+      }
+
+      // Broadcast to all contexts
+      await this.broadcastSignOut();
+
+      this.logger.log('[AUTH] handleSignOut: Complete');
+      sendResponse({ success: true });
+    } catch (error) {
+      this.logger.error('[AUTH] handleSignOut error:', error.message);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // Broadcast sign-out to all open extension contexts
+  async broadcastSignOut() {
+    try {
+      const clients = await self.clients.matchAll({ type: 'all' });
+
+      this.logger.log(`[AUTH] Broadcasting sign-out to ${clients.length} clients...`);
+
+      for (const client of clients) {
+        client.postMessage({ command: 'bxm:signOut' });
+      }
+
+      this.logger.log('[AUTH] Sign-out broadcast complete');
+    } catch (error) {
+      this.logger.error('[AUTH] Error broadcasting sign-out:', error.message);
+    }
   }
 
   // Initialize Firebase
@@ -246,24 +383,26 @@ class Manager {
     });
   }
 
-  // Setup auth storage listener (detect sign-out from pages)
-  setupAuthStorageListener() {
-    this.extension.storage.onChanged.addListener((changes) => {
-      const authChange = changes['bxm:authState'];
-      if (!authChange) {
-        return;
-      }
+  // Initialize Firebase auth on startup
+  // Firebase Auth persists sessions in IndexedDB - we just need to initialize it
+  initializeAuth() {
+    // Get Firebase config
+    const firebaseConfig = this.config?.firebase?.app?.config;
+    if (!firebaseConfig) {
+      this.logger.log('[AUTH] Firebase config not available, skipping auth initialization');
+      return;
+    }
 
-      this.logger.log('[AUTH] Storage auth state changed:', authChange.newValue ? 'signed in' : 'signed out');
+    // Initialize Firebase auth - it will auto-restore from IndexedDB if session exists
+    this.logger.log('[AUTH] Initializing Firebase Auth (will restore persisted session if any)...');
+    const auth = this.getFirebaseAuth();
 
-      // If storage was cleared (sign-out from a page) and we have Firebase initialized, sign out
-      if (!authChange.newValue && this.libraries.firebaseAuth) {
-        this.logger.log('[AUTH] Signing out background Firebase...');
-        this.libraries.firebaseAuth.signOut();
-      }
-    });
-
-    this.logger.log('[AUTH] Auth storage listener set up');
+    // Check if already signed in (Firebase restored from IndexedDB)
+    if (auth.currentUser) {
+      this.logger.log('[AUTH] Firebase restored session from persistence:', auth.currentUser.email);
+    } else {
+      this.logger.log('[AUTH] No persisted Firebase session found');
+    }
   }
 
   // Get or initialize Firebase auth (reuse existing instance)
@@ -298,39 +437,13 @@ class Manager {
   }
 
   // Handle Firebase auth state changes (source of truth for all contexts)
-  async handleAuthStateChange(user) {
+  // No storage operations - Web Manager handles auth state internally
+  handleAuthStateChange(user) {
     this.logger.log('[AUTH] Auth state changed:', user?.email || 'signed out');
-
-    if (user) {
-      // User is signed in - get current stored state to preserve token
-      const result = await new Promise(resolve =>
-        this.extension.storage.local.get('bxm:authState', resolve)
-      );
-      const currentState = result['bxm:authState'] || {};
-
-      // Update auth state with current user info
-      const authState = {
-        token: currentState.token, // Preserve existing token
-        user: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified,
-        },
-        timestamp: Date.now(),
-      };
-
-      await this.extension.storage.local.set({ 'bxm:authState': authState });
-      this.logger.log('[AUTH] Auth state synced to storage');
-    } else {
-      // User is signed out - clear storage
-      await this.extension.storage.local.remove('bxm:authState');
-      this.logger.log('[AUTH] Auth state cleared from storage');
-    }
+    // Nothing else to do - contexts sync via messages, WM handles UI
   }
 
-  // Handle auth token from website
+  // Handle auth token from website (custom token from /token page)
   async handleAuthToken(token, tabId, authSourceTabId = null) {
     try {
       // Log
@@ -347,19 +460,12 @@ class Manager {
       // Log
       this.logger.log('[AUTH] Signed in successfully:', user.email);
 
-      // Save token to storage (user state will be synced by onAuthStateChanged)
-      const result = await new Promise(resolve =>
-        this.extension.storage.local.get('bxm:authState', resolve)
-      );
-      const currentState = result['bxm:authState'] || {};
+      // Broadcast token to all open extension contexts so they can sign in immediately
+      // Token is NOT stored - it expires in 1 hour and is only needed for initial sign-in
+      this.broadcastAuthToken(token);
 
-      await this.extension.storage.local.set({
-        'bxm:authState': {
-          ...currentState,
-          token: token,
-          timestamp: Date.now(),
-        }
-      });
+      // Note: onAuthStateChanged will fire and store user info (without token) in storage
+      // This allows UI to show auth state, but token is never persisted
 
       // Close the auth tab
       await this.extension.tabs.remove(tabId);
@@ -378,6 +484,29 @@ class Manager {
 
     } catch (error) {
       this.logger.error('[AUTH] Error handling auth token:', error);
+    }
+  }
+
+  // Broadcast auth token to all open extension contexts
+  // Used during initial sign-in to immediately sync all open popups, pages, etc.
+  async broadcastAuthToken(token) {
+    try {
+      // Get all clients (extension pages, popups, etc.)
+      const clients = await self.clients.matchAll({ type: 'all' });
+
+      this.logger.log(`[AUTH] Broadcasting token to ${clients.length} clients...`);
+
+      // Send token to each client
+      for (const client of clients) {
+        client.postMessage({
+          command: 'bxm:signInWithToken',
+          token: token,
+        });
+      }
+
+      this.logger.log('[AUTH] Token broadcast complete');
+    } catch (error) {
+      this.logger.error('[AUTH] Error broadcasting token:', error.message);
     }
   }
 

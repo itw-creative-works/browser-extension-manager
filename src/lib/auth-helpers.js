@@ -1,97 +1,136 @@
 // Auth helpers for cross-context auth sync in browser extensions
 // Used by popup.js, options.js, sidepanel.js, page.js
+//
+// Architecture:
+// - Background.js is the SOURCE OF TRUTH for authentication
+// - On context load, contexts wait for WM auth to settle, then ask background if in sync
+// - If out of sync, background provides a fresh custom token (fetched from server)
+// - No BEM-specific storage - Web Manager handles auth state internally
 
 /**
- * Sign in with custom token from storage
- * @param {Object} context - The manager instance
- * @param {Object} authState - Auth state with token
+ * Sync auth state with background.js on context load
+ * Waits for WM auth to settle, then asks background if in sync
+ * @param {Object} context - The manager instance (must have extension, webManager, logger)
  */
-async function signInWithStoredToken(context, authState) {
-  const { webManager, logger } = context;
-
-  // Skip if no token
-  if (!authState?.token) {
-    logger.log('[AUTH-SYNC] No token in auth state, skipping sign in');
-    return;
-  }
+export async function syncWithBackground(context) {
+  const { extension, webManager, logger } = context;
 
   try {
-    logger.log('[AUTH-SYNC] Signing in with stored token...');
+    // Wait for WM auth state to settle FIRST (prevents race conditions)
+    const localState = await new Promise(resolve => {
+      webManager.auth().listen({ once: true }, resolve);
+    });
 
-    // Sign in using webManager's auth which initializes Firebase
-    await webManager.auth().signInWithCustomToken(authState.token);
+    const localUid = localState.user?.uid || null;
+    logger.log('[AUTH-SYNC] Local auth state settled, UID:', localUid);
 
-    logger.log('[AUTH-SYNC] Signed in successfully:', authState.user?.email);
-  } catch (error) {
-    // Token may have expired, clear it
-    logger.error('[AUTH-SYNC] Error signing in with token:', error.message);
+    // Ask background for auth state comparison
+    const response = await new Promise((resolve) => {
+      extension.runtime.sendMessage(
+        { command: 'bxm:syncAuth', contextUid: localUid },
+        (res) => {
+          if (extension.runtime.lastError) {
+            logger.log('[AUTH-SYNC] Background not ready:', extension.runtime.lastError.message);
+            resolve({ needsSync: false });
+            return;
+          }
+          resolve(res || { needsSync: false });
+        }
+      );
+    });
 
-    // If token is invalid/expired, clear the auth state
-    if (error.code === 'auth/invalid-custom-token' || error.code === 'auth/custom-token-expired') {
-      logger.log('[AUTH-SYNC] Token expired, clearing auth state');
-      context.extension.storage.local.remove('bxm:authState');
+    // Already in sync
+    if (!response.needsSync) {
+      logger.log('[AUTH-SYNC] Already in sync with background');
+      return;
     }
+
+    // Need to sign out (background is signed out, context is signed in)
+    if (response.signOut) {
+      logger.log('[AUTH-SYNC] Background signed out, signing out context...');
+      await webManager.auth().signOut();
+      return;
+    }
+
+    // Need to sign in with token
+    if (response.customToken) {
+      logger.log('[AUTH-SYNC] Syncing with background...', response.user?.email);
+      await webManager.auth().signInWithCustomToken(response.customToken);
+      logger.log('[AUTH-SYNC] Synced successfully');
+    }
+
+  } catch (error) {
+    logger.error('[AUTH-SYNC] Error syncing with background:', error.message);
   }
 }
 
 /**
- * Set up storage listener for cross-context auth sync
- * Listens for auth state changes from background.js and syncs Firebase auth
+ * Set up listener for auth token broadcasts from background.js
+ * Handles both sign-in broadcasts and sign-out broadcasts
  * @param {Object} context - The manager instance (must have extension, webManager, logger)
  */
-export function setupAuthStorageListener(context) {
+export function setupAuthBroadcastListener(context) {
+  const { webManager, logger } = context;
+
+  // Listen for messages from service worker (background.js)
+  navigator.serviceWorker?.addEventListener('message', async (event) => {
+    const { command, token } = event.data || {};
+
+    // Handle sign-in broadcast
+    if (command === 'bxm:signInWithToken' && token) {
+      logger.log('[AUTH-BROADCAST] Received sign-in broadcast');
+      try {
+        await webManager.auth().signInWithCustomToken(token);
+        logger.log('[AUTH-BROADCAST] Signed in via broadcast');
+      } catch (error) {
+        logger.error('[AUTH-BROADCAST] Error signing in:', error.message);
+      }
+      return;
+    }
+
+    // Handle sign-out broadcast
+    if (command === 'bxm:signOut') {
+      // Skip if already signed out (prevents loops)
+      if (!webManager.auth().getUser()) {
+        logger.log('[AUTH-BROADCAST] Already signed out, ignoring broadcast');
+        return;
+      }
+      logger.log('[AUTH-BROADCAST] Received sign-out broadcast');
+      try {
+        await webManager.auth().signOut();
+        logger.log('[AUTH-BROADCAST] Signed out via broadcast');
+      } catch (error) {
+        logger.error('[AUTH-BROADCAST] Error signing out:', error.message);
+      }
+    }
+  });
+
+  logger.log('[AUTH-BROADCAST] Broadcast listener set up');
+}
+
+/**
+ * Set up listener to notify background when user signs out from this context
+ * @param {Object} context - The manager instance (must have extension, webManager, logger)
+ */
+export function setupSignOutListener(context) {
   const { extension, webManager, logger } = context;
 
-  // Check existing auth state on load and sign in
-  extension.storage.local.get('bxm:authState', (result) => {
-    const authState = result['bxm:authState'];
+  // Track previous user to detect sign-out
+  let previousUid = null;
 
-    if (authState?.token) {
-      logger.log('[AUTH-SYNC] Found existing auth state, signing in...', authState.user?.email);
-      signInWithStoredToken(context, authState);
-    }
-  });
-
-  // Listen for WM auth state changes and sync to storage
-  // When user signs out via WM, clear storage so background.js knows
   webManager.auth().listen((state) => {
-    if (!state.user) {
-      // User signed out - clear storage so all contexts sync
-      logger.log('[AUTH-SYNC] WM auth signed out, clearing storage...');
-      extension.storage.local.remove('bxm:authState');
+    const currentUid = state.user?.uid || null;
+
+    // Detect sign-out (had user, now don't)
+    if (previousUid && !currentUid) {
+      logger.log('[AUTH-SYNC] Detected sign-out, notifying background...');
+      extension.runtime.sendMessage({ command: 'bxm:signOut' });
     }
+
+    previousUid = currentUid;
   });
 
-  // Listen for storage changes from background.js
-  // Note: BEM normalizes storage to sync or local, so we listen to all areas
-  extension.storage.onChanged.addListener((changes) => {
-    // Check for auth state change
-    const authChange = changes['bxm:authState'];
-    if (!authChange) {
-      return;
-    }
-
-    // Log
-    logger.log('[AUTH-SYNC] Auth state changed in storage:', authChange);
-
-    // Get the new auth state
-    const newAuthState = authChange.newValue;
-
-    // If auth state was cleared (signed out)
-    if (!newAuthState) {
-      logger.log('[AUTH-SYNC] Auth state cleared, signing out...');
-      webManager.auth().signOut();
-      return;
-    }
-
-    // Sign in with the new token
-    if (newAuthState?.token) {
-      signInWithStoredToken(context, newAuthState);
-    }
-  });
-
-  // Log
-  logger.log('Auth storage listener set up');
+  logger.log('[AUTH-SYNC] Sign-out listener set up');
 }
 
 /**
@@ -176,8 +215,7 @@ export function setupAuthEventListeners(context) {
   });
 
   // Note: .auth-signout-btn is handled by web-manager's auth module
-  // BEM's storage listener will detect the sign-out via onAuthStateChanged in background.js
-  // If background hasn't initialized Firebase yet, stale storage is cleared on next auth attempt
+  // setupSignOutListener detects sign-out and notifies background
 
   // Log
   context.logger.log('Auth event listeners set up');

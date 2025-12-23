@@ -2,7 +2,7 @@
 import { Manager as WebManager } from 'web-manager';
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
-import { setupAuthStorageListener, setupAuthEventListeners, openAuthPage as openAuthPageHelper } from './lib/auth-helpers.js';
+import { syncWithBackground, setupAuthBroadcastListener, setupSignOutListener, setupAuthEventListeners, openAuthPage as openAuthPageHelper } from './lib/auth-helpers.js';
 
 // Import theme (exposes Bootstrap to window.bootstrap)
 import '__theme__/_theme.js';
@@ -35,8 +35,14 @@ class Manager {
       this.logger.log('Auth state changed:', state);
     });
 
-    // Set up storage listener for cross-context auth sync
-    setupAuthStorageListener(this);
+    // Sync auth with background.js (waits for WM auth to settle first)
+    await syncWithBackground(this);
+
+    // Set up broadcast listener for sign-in/sign-out from background
+    setupAuthBroadcastListener(this);
+
+    // Set up sign-out listener to notify background when user signs out
+    setupSignOutListener(this);
 
     // Set up auth event listeners (sign in, account buttons)
     setupAuthEventListeners(this);

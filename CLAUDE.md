@@ -354,11 +354,7 @@ Provides cross-context auth synchronization and reusable auth UI event handlers.
 
 ### Cross-Context Auth Architecture
 
-**Background.js is the source of truth** for authentication. Browser extensions have multiple isolated JavaScript contexts (background, popup, options, pages, sidepanel) - each runs its own Firebase instance. BEM solves this by:
-
-1. Background.js monitors for auth tokens via `tabs.onUpdated`
-2. When detected, background signs in Firebase and saves to `chrome.storage`
-3. Other contexts listen to storage changes and sync their Firebase instances
+**Background.js is the source of truth** for authentication. Browser extensions have multiple isolated JavaScript contexts (background, popup, options, pages, sidepanel) - each runs its own Firebase instance. BEM syncs them via messaging (no storage).
 
 **Sign-in Flow:**
 ```
@@ -366,29 +362,36 @@ User clicks .auth-signin-btn
   → openAuthPage() opens https://{authDomain}/token?authSourceTabId=123
   → Website authenticates, redirects to /token?authToken=xxx
   → background.js tabs.onUpdated detects authDomain URL with authToken param
-  → background.js calls handleAuthToken():
-    → signInWithCustomToken(auth, token)
-    → Saves {token, user, timestamp} to storage key 'bxm:authState'
-    → Closes the /token tab
-    → Reactivates the original tab (authSourceTabId)
-  → Other contexts detect storage change via setupAuthStorageListener()
-  → Each context calls signInWithStoredToken() to sign in their Firebase
+  → background.js signs in with signInWithCustomToken()
+  → background.js broadcasts token to all open contexts via postMessage()
+  → Closes the /token tab, reactivates original tab
+  → Open contexts receive broadcast and sign in with the token
+```
+
+**Context Load Flow:**
+```
+Context loads (popup, page, options, sidepanel)
+  → Web Manager initializes, waits for auth to settle via auth.listen({once: true})
+  → Sends bxm:syncAuth message to background with local UID
+  → Background compares UIDs:
+    → Same UID (including both null) → already in sync, no action
+    → Different UID → background fetches fresh custom token from server, sends to context
+    → Background signed out, context signed in → tells context to sign out
 ```
 
 **Sign-out Flow:**
 ```
 User clicks .auth-signout-btn
-  → Web Manager signs out Firebase locally
-  → setupAuthStorageListener() detects WM auth state change (user=null)
-  → Clears 'bxm:authState' from storage
-  → background.js setupAuthStorageListener() detects storage cleared
-  → background.js signs out its Firebase instance
-  → Other contexts detect storage cleared and sign out
+  → Web Manager signs out that context's Firebase
+  → setupSignOutListener() detects sign-out, sends bxm:signOut to background
+  → background.js signs out its Firebase
+  → background.js broadcasts bxm:signOut to all other contexts
+  → All contexts sign out
 ```
 
 **Key Implementation Details:**
 
-1. **Storage area**: BEM normalizes storage to `sync` (if available) or `local`. Auth listeners should NOT check `areaName` - just check for the `bxm:authState` key directly.
+1. **No storage**: Auth state is NOT stored in `chrome.storage`. Firebase persists sessions in IndexedDB per context. Web Manager handles UI bindings.
 
 2. **Firebase in service workers**: Static ES6 imports are required. Dynamic `import()` fails with webpack chunking in service workers.
 
@@ -397,7 +400,9 @@ User clicks .auth-signout-btn
 4. **Required permission**: `tabs` permission needed for `tabs.onUpdated` listener.
 
 **Functions:**
-- `setupAuthStorageListener(context)` - Listens for auth state changes from background.js AND monitors WM auth state to clear storage on sign-out
+- `syncWithBackground(context)` - Compares context's UID with background's UID on load, syncs if different
+- `setupAuthBroadcastListener(context)` - Listens for sign-in/sign-out broadcasts from background
+- `setupSignOutListener(context)` - Notifies background when context signs out
 - `setupAuthEventListeners(context)` - Sets up delegated click handlers for auth buttons
 - `openAuthPage(context, options)` - Opens auth page on the website with authSourceTabId for tab restoration
 
@@ -431,21 +436,6 @@ Add these classes to your HTML elements to enable automatic auth handling:
 - `data-wm-bind="@text auth.user.displayName"` - Display user's name
 - `data-wm-bind="@text auth.user.email"` - Display user's email
 - `data-wm-bind="@attr src auth.user.photoURL"` - Set avatar image src
-
-**Storage Schema (`bxm:authState`):**
-```javascript
-{
-  token: "firebase-custom-token",  // Used by other contexts to sign in
-  user: {
-    uid: "...",
-    email: "...",
-    displayName: "...",
-    photoURL: "...",
-    emailVerified: true
-  },
-  timestamp: 1234567890
-}
-```
 
 **Logger:** [src/lib/logger.js](src/lib/logger.js)
 - Full logging utility
@@ -808,8 +798,8 @@ Manager.initialize().then(() => {
 - [src/cli.js](src/cli.js) - CLI implementation
 
 **Auth System (Cross-Context):**
-- [src/background.js](src/background.js) - Source of truth for auth; `setupAuthTokenListener()`, `setupAuthStorageListener()`, `handleAuthToken()`
-- [src/lib/auth-helpers.js](src/lib/auth-helpers.js) - `setupAuthStorageListener()`, `openAuthPage()`, `setupAuthEventListeners()` for non-background contexts
+- [src/background.js](src/background.js) - Source of truth; `handleSyncAuth()`, `handleSignOut()`, `broadcastAuthToken()`
+- [src/lib/auth-helpers.js](src/lib/auth-helpers.js) - `syncWithBackground()`, `setupAuthBroadcastListener()`, `setupSignOutListener()`
 
 **CSS Framework:**
 - [src/assets/css/browser-extension-manager.scss](src/assets/css/browser-extension-manager.scss) - Main entry
