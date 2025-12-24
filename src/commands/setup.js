@@ -111,7 +111,7 @@ async function updateManager() {
   // Check if we need to update
   if (!isUpToDate) {
     // Quit if major version difference
-    if (levelDifference === 'major') {
+    if (levelDifference === 'major' && installedVersion !== 'latest') {
       return logger.error(`Major version difference detected. Please update to ${latestVersion} manually.`);
     }
 
