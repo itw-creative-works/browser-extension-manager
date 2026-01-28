@@ -6,7 +6,7 @@ const glob = require('glob').globSync;
 const path = require('path');
 const wp = require('webpack');
 const ReplacePlugin = require('../plugins/webpack/replace.js');
-const stripDevBlocksLoader = require.resolve('../loaders/webpack/strip-dev-blocks-loader.js');
+const stripDevBlocksLoader = require.resolve('../loaders/webpack/strip-dev-blocks.js');
 const version = require('wonderful-version');
 
 // Load package

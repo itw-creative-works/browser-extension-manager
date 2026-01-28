@@ -1,5 +1,5 @@
 /**
- * Webpack Loader: strip-dev-blocks-loader
+ * Webpack Loader: strip-dev-blocks
  * Strips code between /* @dev-only:start * / and /* @dev-only:end * / markers
  * Runs before webpack bundles, so the source code is still clean
  */
