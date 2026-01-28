@@ -19,7 +19,7 @@ class Manager {
 
   async initialize() {
     // Configuration
-    const configuration = window.BEM_BUILD_JSON?.config;
+    const configuration = window.BXM_BUILD_JSON?.config;
 
     // Set properties
     this.extension = extension;

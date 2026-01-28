@@ -27,13 +27,13 @@ class Manager {
     this.serviceWorker = null;
 
     // Load config from build.js
-    this.config = serviceWorker.BEM_BUILD_JSON?.config || {};
+    this.config = serviceWorker.BXM_BUILD_JSON?.config || {};
 
     // Defaults
     this.version = this.config?.version || 'unknown';
     this.brand = this.config?.brand || { name: 'unknown' };
     this.app = this.config?.app?.id || 'extension';
-    this.environment = this.config?.bem?.environment || 'production';
+    this.environment = this.config?.bxm?.environment || 'production';
     this.libraries = {
       firebase: null,
       firebaseAuth: null,
@@ -41,7 +41,7 @@ class Manager {
       promoServer: false,
     };
     this.cache = {
-      breaker: this.config?.bem?.cache_breaker || new Date().getTime(),
+      breaker: this.config?.bxm?.cache_breaker || new Date().getTime(),
       name: ''
     };
   }
@@ -73,7 +73,7 @@ class Manager {
 
     // Log
     this.logger.log('Initialized!', this.version, this.cache.name, this);
-    this.logger.log('Config loaded from BEM_BUILD_JSON:', this.config);
+    this.logger.log('Config loaded from BXM_BUILD_JSON:', this.config);
 
     // Return manager instance
     return this;
@@ -318,7 +318,7 @@ class Manager {
     // DEBUG: Log the full config to see what we have
     console.log('[AUTH] setupAuthTokenListener called');
     console.log('[AUTH] this.config:', this.config);
-    console.log('[AUTH] BEM_BUILD_JSON:', serviceWorker.BEM_BUILD_JSON);
+    console.log('[AUTH] BXM_BUILD_JSON:', serviceWorker.BXM_BUILD_JSON);
 
     // Get auth domain from config
     // Structure is: this.config.firebase.app.config.authDomain
@@ -516,7 +516,7 @@ class Manager {
     if (this.environment !== 'development') return;
 
     // Get port from config or use default
-    const port = this.config?.bem?.liveReloadPort || 35729;
+    const port = this.config?.bxm?.liveReloadPort || 35729;
 
     // Setup livereload
     const address = `ws://localhost:${port}/livereload`;
@@ -613,7 +613,7 @@ function setupGlobalHandlers() {
     }
 
     // Get website URL from config
-    const config = serviceWorker.BEM_BUILD_JSON?.config || {};
+    const config = serviceWorker.BXM_BUILD_JSON?.config || {};
     const website = config?.brand?.url;
 
     // Skip if no website configured

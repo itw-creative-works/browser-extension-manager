@@ -19,7 +19,7 @@
 //   const self = this;
 
 //   // Configuration
-//   const configuration = window.BEM_BUILD_JSON?.config;
+//   const configuration = window.BXM_BUILD_JSON?.config;
 
 //   // Initiate the web manager
 //   self.extension = require('./lib/extension');

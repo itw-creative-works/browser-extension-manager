@@ -1,12 +1,12 @@
-# Browser Extension Manager (BEM)
+# Browser Extension Manager (BXM)
 
 ## Identity
 
-Browser Extension Manager (BEM) is a comprehensive framework for building modern browser extensions. It provides a template-based development system with built-in build tools, component architecture, theming support, and best practices for creating cross-browser extensions.
+Browser Extension Manager (BXM) is a comprehensive framework for building modern browser extensions. It provides a template-based development system with built-in build tools, component architecture, theming support, and best practices for creating cross-browser extensions.
 
 ## Quick Start
 
-### For Consuming Projects (Extensions Built Using BEM)
+### For Consuming Projects (Extensions Built Using BXM)
 1. Run `npx bxm setup` to initialize the project
 2. Run `npm start` to start development
 3. Load `packaged/raw/` directory in browser as unpacked extension
@@ -14,7 +14,7 @@ Browser Extension Manager (BEM) is a comprehensive framework for building modern
 
 ### For Framework Development (This Repository)
 1. Run `npm start` to watch and compile framework changes
-2. Test changes in a consuming project by linking: `npm link` (in BEM) then `npm link browser-extension-manager` (in consuming project)
+2. Test changes in a consuming project by linking: `npm link` (in BXM) then `npm link browser-extension-manager` (in consuming project)
 3. Changes in `src/` compile to `dist/` automatically
 
 ## Architecture Overview
@@ -131,7 +131,7 @@ browser-extension-manager/
 
 ## Consuming Project Structure
 
-When users create a project using BEM, they get this structure:
+When users create a project using BXM, they get this structure:
 
 ```
 my-extension/
@@ -149,7 +149,7 @@ my-extension/
 │   ├── _locales/                            # i18n translations
 │   └── manifest.json                        # Extension manifest
 ├── config/
-│   └── config.json                          # BEM configuration
+│   └── config.json                          # BXM configuration
 ├── hooks/
 │   ├── build:pre.js                         # Pre-build hook
 │   └── build:post.js                        # Post-build hook
@@ -354,7 +354,7 @@ Provides cross-context auth synchronization and reusable auth UI event handlers.
 
 ### Cross-Context Auth Architecture
 
-**Background.js is the source of truth** for authentication. Browser extensions have multiple isolated JavaScript contexts (background, popup, options, pages, sidepanel) - each runs its own Firebase instance. BEM syncs them via messaging (no storage).
+**Background.js is the source of truth** for authentication. Browser extensions have multiple isolated JavaScript contexts (background, popup, options, pages, sidepanel) - each runs its own Firebase instance. BXM syncs them via messaging (no storage).
 
 **Sign-in Flow:**
 ```
@@ -395,7 +395,7 @@ User clicks .auth-signout-btn
 
 2. **Firebase in service workers**: Static ES6 imports are required. Dynamic `import()` fails with webpack chunking in service workers.
 
-3. **Config path**: `authDomain` is at `config.firebase.app.config.authDomain` (loaded via BEM_BUILD_JSON).
+3. **Config path**: `authDomain` is at `config.firebase.app.config.authDomain` (loaded via BXM_BUILD_JSON).
 
 4. **Required permission**: `tabs` permission needed for `tabs.onUpdated` listener.
 
@@ -711,7 +711,7 @@ new ReplacePlugin({
 
 1. **Rebuild framework:** `npm run prepare`
 2. **Reinstall in consuming project:** `npm install browser-extension-manager@latest`
-3. **Or use local link:** `npm link` (in BEM) then `npm link browser-extension-manager` (in project)
+3. **Or use local link:** `npm link` (in BXM) then `npm link browser-extension-manager` (in project)
 
 ### Gulp task errors
 
@@ -736,7 +736,7 @@ new ReplacePlugin({
 ## Notable Dependencies
 
 ### Web Manager
-BEM integrates **Web Manager** for Firebase, analytics, and web services functionality. Each component manager initializes Web Manager automatically with configuration from `config/config.json`.
+BXM integrates **Web Manager** for Firebase, analytics, and web services functionality. Each component manager initializes Web Manager automatically with configuration from `config/config.json`.
 
 **Web Manager API:**
 - Study the Web Manager API and documentation in the sibling repository
@@ -744,7 +744,7 @@ BEM integrates **Web Manager** for Firebase, analytics, and web services functio
 - GitHub: https://github.com/itw-creative-works/web-manager
 - npm: https://www.npmjs.com/package/web-manager
 
-**Usage in BEM:**
+**Usage in BXM:**
 ```javascript
 const Manager = new (require('browser-extension-manager/popup'));
 

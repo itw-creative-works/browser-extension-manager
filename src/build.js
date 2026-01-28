@@ -3,7 +3,7 @@ const path = require('path');
 const jetpack = require('fs-jetpack');
 const fs = require('fs');
 const JSON5 = require('json5');
-const argv = require('yargs').argv;
+const argv = require('yargs')(process.argv.slice(2)).parseSync();
 const { force, execute } = require('node-powertools');
 
 // Class

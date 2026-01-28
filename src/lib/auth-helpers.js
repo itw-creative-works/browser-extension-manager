@@ -5,7 +5,7 @@
 // - Background.js is the SOURCE OF TRUTH for authentication
 // - On context load, contexts wait for WM auth to settle, then ask background if in sync
 // - If out of sync, background provides a fresh custom token (fetched from server)
-// - No BEM-specific storage - Web Manager handles auth state internally
+// - No BXM-specific storage - Web Manager handles auth state internally
 
 /**
  * Sync auth state with background.js on context load

@@ -46,7 +46,7 @@ npm start
 1. Simply run `npx bxm setup` in Terminal to get all the latest updates from the **Ultimate Browser Extension template**.
 
 ## 🌐 Automatic Translation
-When you run `npm run build`, BEM automatically translates your `src/_locales/en/messages.json` to 16 languages using Claude CLI:
+When you run `npm run build`, BXM automatically translates your `src/_locales/en/messages.json` to 16 languages using Claude CLI:
 `zh`, `es`, `hi`, `ar`, `pt`, `ru`, `ja`, `de`, `fr`, `ko`, `ur`, `id`, `bn`, `tl`, `vi`, `it`
 
 Only missing translations are generated - existing translations are preserved.
@@ -58,7 +58,7 @@ Only missing translations are generated - existing translations are preserved.
 2. Upload the `.zip` file to the browser's extension store.
 
 ### Automatic Publishing
-BEM can automatically publish to Chrome, Firefox, and Edge stores when `BXM_IS_PUBLISH=true`:
+BXM can automatically publish to Chrome, Firefox, and Edge stores when `BXM_IS_PUBLISH=true`:
 
 ```bash
 BXM_IS_PUBLISH=true npm run build
@@ -88,7 +88,7 @@ Only stores with configured credentials will be published to.
 
 ## 🔐 Authentication
 
-BEM provides built-in authentication that syncs across all extension contexts (popup, options, pages, sidepanel, background).
+BXM provides built-in authentication that syncs across all extension contexts (popup, options, pages, sidepanel, background).
 
 ### How It Works
 

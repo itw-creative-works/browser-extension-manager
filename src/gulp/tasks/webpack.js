@@ -6,7 +6,7 @@ const glob = require('glob').globSync;
 const path = require('path');
 const wp = require('webpack');
 const ReplacePlugin = require('../plugins/webpack/replace.js');
-const StripDevBlocksPlugin = require('../plugins/webpack/strip-dev-blocks.js');
+const stripDevBlocksLoader = require.resolve('../loaders/webpack/strip-dev-blocks-loader.js');
 const version = require('wonderful-version');
 
 // Load package
@@ -52,7 +52,7 @@ const watchInput = [
   // All project assets js - watch for changes but don't compile as entry points
   'src/assets/js/**/*.js',
 
-  // All BEM package src files - watch for changes (includes background.js, popup.js, etc.)
+  // All BXM package src files - watch for changes (includes background.js, popup.js, etc.)
   `${rootPathPackage}/src/**/*.js`,
 
   // So we can watch for changes while we're developing web-manager
@@ -90,7 +90,6 @@ function getSettings() {
     // Browser extensions have CSP restrictions, so use source-map instead of eval-source-map
     devtool: Manager.actLikeProduction() ? false : 'source-map',
     plugins: [
-      new StripDevBlocksPlugin(),
       new ReplacePlugin(getTemplateReplaceOptions(), { type: 'template' }),
     ],
     entry: {
@@ -178,23 +177,27 @@ function getSettings() {
         {
           test: /\.js$/,
           exclude: /node_modules/,
-          use: {
-            loader: 'babel-loader',
-            options: {
-              sourceMaps: !Manager.actLikeProduction(),
-              presets: [
-                [require.resolve('@babel/preset-env', {
-                  paths: [path.resolve(process.cwd(), 'node_modules', package.name, 'node_modules')]
-                }), {
-                  exclude: [
-                    // Prevent lighthouse error in 2025 about Legacy JavaScript
-                    // 'es.array.from',
-                  ]
-                }]
-              ],
-              compact: Manager.isBuildMode(),
-            }
-          }
+          use: [
+            {
+              loader: 'babel-loader',
+              options: {
+                sourceMaps: !Manager.actLikeProduction(),
+                presets: [
+                  [require.resolve('@babel/preset-env', {
+                    paths: [path.resolve(process.cwd(), 'node_modules', package.name, 'node_modules')]
+                  }), {
+                    exclude: [
+                      // Prevent lighthouse error in 2025 about Legacy JavaScript
+                      // 'es.array.from',
+                    ]
+                  }]
+                ],
+                compact: Manager.isBuildMode(),
+              }
+            },
+            // Strip dev-only blocks before babel processes the file
+            stripDevBlocksLoader,
+          ]
         }
       ]
     },

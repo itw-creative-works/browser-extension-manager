@@ -8,7 +8,7 @@ const path = require('path');
 const { minimatch } = require('minimatch');
 const { template } = require('node-powertools');
 const createTemplateTransform = require('./utils/template-transform');
-const argv = require('yargs').argv;
+const argv = require('yargs')(process.argv.slice(2)).parseSync();
 const JSON5 = require('json5');
 
 // Load package

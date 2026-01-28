@@ -35,9 +35,9 @@ const JSONP_TEMPLATE = `
   const config = { config };
 
   // Assign to various global scopes for compatibility
-  if (typeof self !== 'undefined') self.BEM_BUILD_JSON = config;
-  if (typeof window !== 'undefined') window.BEM_BUILD_JSON = config;
-  if (typeof globalThis !== 'undefined') globalThis.BEM_BUILD_JSON = config;
+  if (typeof self !== 'undefined') self.BXM_BUILD_JSON = config;
+  if (typeof window !== 'undefined') window.BXM_BUILD_JSON = config;
+  if (typeof globalThis !== 'undefined') globalThis.BXM_BUILD_JSON = config;
 })();
 `.trim();
 
@@ -66,8 +66,8 @@ async function generateBuildJs(outputDir) {
         // Brand configuration (from browser-extension-manager.json or manifest)
         brand: config.brand || {},
 
-        // BEM-specific config
-        bem: {
+        // BXM-specific config
+        bxm: {
           environment: Manager.getEnvironment(),
           cache_breaker: Math.round(new Date().getTime() / 1000),
           liveReloadPort: config.liveReloadPort || 35729,
