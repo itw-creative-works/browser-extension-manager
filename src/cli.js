@@ -2,6 +2,9 @@
 const path = require('path');
 const jetpack = require('fs-jetpack');
 
+// Load .env file from current working directory (project root)
+require('dotenv').config({ path: path.join(process.cwd(), '.env') });
+
 // Command Aliases
 const DEFAULT = 'setup';
 const ALIASES = {
