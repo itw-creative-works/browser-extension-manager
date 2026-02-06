@@ -14,6 +14,7 @@ const { minimatch } = require('minimatch');
 const package = Manager.getPackage('main');
 const project = Manager.getPackage('project');
 const manifest = Manager.getManifest();
+const rootPathProject = Manager.getRootPath('project');
 
 // Dependency MAP
 const DEPENDENCY_MAP = {
@@ -28,6 +29,7 @@ module.exports = async function (options) {
   options.checkPeerDependencies = force(options.checkPeerDependencies || true, 'boolean');
   options.setupScripts = force(options.setupScripts || true, 'boolean');
   options.checkLocality = force(options.checkLocality || true, 'boolean');
+  options.migrate = options.migrate !== 'false';
 
   // Log
   logger.log(`Welcome to ${package.name} v${package.version}!`);
@@ -40,6 +42,11 @@ module.exports = async function (options) {
   try {
     // Log current working directory
     await logCWD();
+
+    // Run migrations
+    if (options.migrate) {
+      await migrate();
+    }
 
     // Ensure this package is up-to-date
     if (options.checkManager) {
@@ -224,4 +231,57 @@ function logVersionCheck(name, installedVersion, latestVersion, isUpToDate) {
 
   // Log
   logger.log(`Checking if ${name} is up to date (${logger.format.bold(installedVersion)} >= ${logger.format.bold(latestVersion)}): ${isUpToDate ? logger.format.green('Yes') : logger.format.red('No')}`);
+}
+
+// Run migrations based on installed version
+async function migrate() {
+  const installedVersion = project.devDependencies[package.name] || '0.0.0';
+
+  // Skip if using local version
+  if (installedVersion.startsWith('file:')) {
+    return;
+  }
+
+  // Migrate hooks to nested structure (introduced in 0.0.185)
+  if (version.is(installedVersion, '<=', '1.0.0')) {
+    await migrateHooksToNestedStructure();
+  }
+}
+
+// Migrate old hook files to new nested structure
+async function migrateHooksToNestedStructure() {
+  const hooksDir = path.join(rootPathProject, 'hooks');
+
+  // Map of old file names to new paths
+  const migrations = [
+    { old: 'build:post.js', new: 'build/post.js' },
+    { old: 'build:pre.js', new: 'build/pre.js' },
+    { old: 'middleware:request.js', new: 'middleware/request.js' },
+  ];
+
+  let migratedCount = 0;
+
+  for (const migration of migrations) {
+    const oldPath = path.join(hooksDir, migration.old);
+    const newPath = path.join(hooksDir, migration.new);
+
+    // Check if old file exists
+    if (!jetpack.exists(oldPath)) {
+      continue;
+    }
+
+    // Check if new file already exists
+    if (jetpack.exists(newPath)) {
+      logger.warn(`⚠️  Migrate ${migration.old}: ${migration.new} already exists`);
+    }
+
+    // Move the file
+    jetpack.move(oldPath, newPath, { overwrite: true });
+    logger.log(`✅ Migrated hook: ${migration.old} → ${migration.new}`);
+    migratedCount++;
+  }
+
+  if (migratedCount > 0) {
+    logger.log(`✅ Migrated ${migratedCount} hook file(s) to new nested structure`);
+  }
 }
