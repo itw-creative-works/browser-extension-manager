@@ -138,7 +138,7 @@ async function ensurePeerDependencies() {
 
   // Loop through and make sure project has AT LEAST the required version
   for (let [dependency, ver] of Object.entries(requiredPeerDependencies)) {
-    const projectDependencyVersion = version.clean(project.dependencies[dependency] || project.devDependencies[dependency]);
+    const projectDependencyVersion = version.clean(project?.dependencies?.[dependency] || project?.devDependencies?.[dependency]);
     const location = DEPENDENCY_MAP[dependency] === 'dev' ? '--save-dev' : '';
     const isUpToDate = version.is(projectDependencyVersion, '>=', ver);
 
@@ -211,8 +211,8 @@ function install(package, ver, location) {
     logger.log('Installed:', package, ver);
 
     // Update package object
-    project.dependencies = projectUpdated.dependencies;
-    project.devDependencies = projectUpdated.devDependencies;
+    project.dependencies = projectUpdated.dependencies || {};
+    project.devDependencies = projectUpdated.devDependencies || {};
   });
 }
 
