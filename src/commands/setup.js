@@ -243,7 +243,7 @@ async function migrate() {
   }
 
   // Migrate hooks to nested structure (introduced in 0.0.185)
-  if (version.is(installedVersion, '<=', '1.0.0')) {
+  if (version.is(installedVersion, '<=', '2.0.0')) {
     await migrateHooksToNestedStructure();
   }
 }
