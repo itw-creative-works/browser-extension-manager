@@ -1,153 +1,188 @@
 // Libraries
 const Manager = new (require('../../build.js'));
 const logger = Manager.logger('translate');
+const { query } = require('@anthropic-ai/claude-agent-sdk');
 const { series } = require('gulp');
 const jetpack = require('fs-jetpack');
 const path = require('path');
-const { execute } = require('node-powertools');
+const crypto = require('crypto');
 const JSON5 = require('json5');
 
 // Locale config (shared with audit.js)
 const { limits: LOCALE_LIMITS, languages: LANGUAGES } = require('../config/locales.js');
 
 // Paths
+const configMessagesPath = path.join(process.cwd(), 'config', 'messages.json');
+const configDescriptionPath = path.join(process.cwd(), 'config', 'description.md');
 const localesDir = path.join(process.cwd(), 'src', '_locales');
 const enMessagesPath = path.join(localesDir, 'en', 'messages.json');
+const translationsDir = path.join(process.cwd(), 'packaged', 'translations');
+const descriptionDir = path.join(translationsDir, 'description');
+const cacheDir = path.join(process.cwd(), '.cache');
+const cachePath = path.join(cacheDir, 'translate.json');
 
-// Check if Claude CLI is installed
-async function isClaudeInstalled() {
+// Helper: Compute hash of a string
+function hash(content) {
+  return crypto.createHash('md5').update(content).digest('hex');
+}
+
+// Helper: Read cache
+function readCache() {
+  if (!jetpack.exists(cachePath)) {
+    return {};
+  }
+
   try {
-    await execute('which claude');
-    return true;
+    return JSON.parse(jetpack.read(cachePath));
   } catch (e) {
-    return false;
+    return {};
   }
 }
 
-// Main translate task
-async function translate(complete) {
-  // Only run in build mode
-  if (!Manager.isBuildMode()) {
-    logger.log('Skipping translation (not in build mode)');
-    return complete();
+// Helper: Write cache
+function writeCache(cache) {
+  jetpack.dir(cacheDir);
+  jetpack.write(cachePath, JSON.stringify(cache, null, 2));
+}
+
+// Helper: Check if source has changed since last translation
+function hasSourceChanged(cacheKey, content) {
+  const cache = readCache();
+  const currentHash = hash(content);
+
+  return cache[cacheKey] !== currentHash;
+}
+
+// Helper: Update cache hash for a source
+function updateCacheHash(cacheKey, content) {
+  const cache = readCache();
+
+  cache[cacheKey] = hash(content);
+
+  writeCache(cache);
+}
+
+// Helper: Read and parse config/messages.json
+function readConfigMessages() {
+  if (!jetpack.exists(configMessagesPath)) {
+    return null;
   }
 
-  // Check if Claude CLI is installed
-  if (!await isClaudeInstalled()) {
-    logger.log('Skipping translation (Claude CLI not installed)');
-    return complete();
-  }
-
-  // Log
-  logger.log('Starting translation...');
-
-  // Check if English messages exist
-  if (!jetpack.exists(enMessagesPath)) {
-    logger.warn(`English messages not found at ${enMessagesPath}`);
-    return complete();
-  }
-
-  // Read English messages
-  let enMessages;
   try {
-    enMessages = JSON5.parse(jetpack.read(enMessagesPath));
+    return JSON5.parse(jetpack.read(configMessagesPath));
   } catch (e) {
-    logger.error(`Failed to parse English messages: ${e.message}`);
-    return complete();
+    logger.error(`Failed to parse config/messages.json: ${e.message}`);
+    return null;
   }
+}
 
-  // Get English keys
-  const enKeys = Object.keys(enMessages);
-  logger.log(`Found ${enKeys.length} keys in English messages`);
+// Helper: Call Claude Agent SDK with a prompt and parse JSON from the response
+async function callClaude(prompt) {
+  let result = '';
 
-  // Check which languages need translation
-  const languagesToTranslate = [];
-
-  for (const lang of Object.keys(LANGUAGES)) {
-    const langDir = path.join(localesDir, lang);
-    const langMessagesPath = path.join(langDir, 'messages.json');
-
-    // Check if translation exists
-    const exists = jetpack.exists(langMessagesPath);
-
-    if (!exists) {
-      languagesToTranslate.push({ lang, missingKeys: enKeys, existingMessages: {} });
-      continue;
-    }
-
-    // Check for missing keys
-    try {
-      const existingMessages = JSON5.parse(jetpack.read(langMessagesPath));
-      const missingKeys = enKeys.filter(key => !existingMessages[key]);
-
-      if (missingKeys.length > 0) {
-        logger.log(`[${lang}] Found ${missingKeys.length} missing keys`);
-        languagesToTranslate.push({ lang, missingKeys, existingMessages });
-      } else {
-        logger.log(`[${lang}] Up to date, skipping`);
-      }
-    } catch (e) {
-      logger.warn(`[${lang}] Failed to parse existing messages, will retranslate: ${e.message}`);
-      languagesToTranslate.push({ lang, missingKeys: enKeys, existingMessages: {} });
-    }
-  }
-
-  // Skip if nothing to translate
-  if (languagesToTranslate.length === 0) {
-    logger.log('All translations up to date');
-    return complete();
-  }
-
-  logger.log(`Translating ${languagesToTranslate.length} languages in one call...`);
-
-  // Translate all languages at once
-  try {
-    const translations = await translateAllWithClaude(enMessages, languagesToTranslate);
-
-    // Write each translation
-    for (const { lang, existingMessages } of languagesToTranslate) {
-      const langDir = path.join(localesDir, lang);
-      const langMessagesPath = path.join(langDir, 'messages.json');
-
-      if (translations[lang]) {
-        // Merge with existing messages
-        const finalMessages = { ...existingMessages, ...translations[lang] };
-
-        // Ensure directory exists
-        jetpack.dir(langDir);
-
-        // Write translated messages
-        jetpack.write(langMessagesPath, JSON.stringify(finalMessages, null, 2));
-
-        logger.log(`[${lang}] Translation saved`);
-      } else {
-        logger.warn(`[${lang}] No translation returned`);
+  for await (const message of query({
+    prompt,
+    options: {
+      model: 'claude-sonnet-4-5-20250929',
+      maxTurns: 1,
+      allowedTools: [],
+      thinking: { type: 'disabled' },
+    },
+  })) {
+    // Collect assistant text
+    if (message.type === 'assistant' && message.message?.content) {
+      for (const block of message.message.content) {
+        if (block.type === 'text') {
+          result += block.text;
+        }
       }
     }
-  } catch (e) {
-    logger.error(`Translation failed: ${e.message}`);
   }
 
-  // Log
-  logger.log('Translation finished!');
+  logger.log(`Claude responded (${result.length} chars)`);
+
+  // Parse JSON from response
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('No JSON found in Claude response');
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
+// Helper: Split an object into chunks of a given size
+function chunkObject(obj, size) {
+  const entries = Object.entries(obj);
+  const chunks = [];
+
+  for (let i = 0; i < entries.length; i += size) {
+    chunks.push(Object.fromEntries(entries.slice(i, i + size)));
+  }
+
+  return chunks;
+}
+
+// Copy config files to src/ locations
+// Always runs (dev + build) so distribute task has the latest files
+async function copyConfigFiles(complete) {
+  // Copy config/messages.json → src/_locales/en/messages.json
+  const enMessages = readConfigMessages();
+  if (enMessages) {
+    jetpack.dir(path.join(localesDir, 'en'));
+    jetpack.write(enMessagesPath, JSON.stringify(enMessages, null, 2));
+    logger.log('Copied config/messages.json → src/_locales/en/messages.json');
+  } else {
+    logger.warn('config/messages.json not found or invalid, skipping');
+  }
 
   // Complete
   return complete();
 }
 
-// Translate all languages using a single Claude CLI call
-async function translateAllWithClaude(enMessages, languagesToTranslate) {
-  // Build language info for prompt
-  const languageList = languagesToTranslate.map(({ lang }) =>
-    `- "${lang}": ${LANGUAGES[lang]}`
-  ).join('\n');
+// Translate messages.json into all configured languages
+// Only runs in build mode
+async function translateMessages(complete) {
+  // Only run in build mode
+  if (!Manager.isBuildMode()) {
+    logger.log('Skipping messages translation (not in build mode)');
+    return complete();
+  }
+
+  // Log
+  logger.log('Starting messages translation...');
+
+  // Read config/messages.json
+  const enMessages = readConfigMessages();
+  if (!enMessages) {
+    logger.warn('config/messages.json not found or invalid, skipping');
+    return complete();
+  }
+
+  // Check if source has changed
+  const sourceContent = jetpack.read(configMessagesPath);
+  if (!hasSourceChanged('messages', sourceContent)) {
+    logger.log('config/messages.json unchanged since last translation, skipping');
+    return complete();
+  }
+
+  // Get English keys
+  const enKeys = Object.keys(enMessages);
+  logger.log(`Found ${enKeys.length} keys in config/messages.json`);
+
+  // Build language list
+  const languageList = Object.entries(LANGUAGES)
+    .map(([code, name]) => `- "${code}": ${name}`)
+    .join('\n');
 
   // Build character limits info
   const limitsInfo = Object.entries(LOCALE_LIMITS)
     .map(([field, limit]) => `- ${field}: max ${limit} characters`)
     .join('\n');
 
-  const prompt = `Translate the following Chrome extension messages.json content from English to multiple languages.
+  logger.log(`Translating messages into ${Object.keys(LANGUAGES).length} languages...`);
+
+  try {
+    const translations = await callClaude(`Translate the following Chrome extension messages.json content from English to multiple languages.
 
 TARGET LANGUAGES:
 ${languageList}
@@ -174,48 +209,135 @@ OUTPUT FORMAT:
   ...
 }
 
-Output the translated JSON:`;
+Output the translated JSON:`);
 
-  // Write prompt to temp file to avoid shell escaping issues
-  const tempDir = path.join(process.cwd(), '.temp');
-  const tempFile = path.join(tempDir, 'translate-all.txt');
+    // Write each translation
+    for (const lang of Object.keys(LANGUAGES)) {
+      if (!translations[lang]) {
+        logger.warn(`[${lang}] No translation returned`);
+        continue;
+      }
 
-  try {
-    // Ensure temp dir exists and write prompt
-    jetpack.dir(tempDir);
-    jetpack.write(tempFile, prompt);
+      const langDir = path.join(localesDir, lang);
+      const langMessagesPath = path.join(langDir, 'messages.json');
 
-    // Build command - pipe from file
-    const command = `cat "${tempFile}" | claude -p -`;
-
-    // Log start
-    logger.log('Calling Claude CLI...');
-
-    // Run Claude CLI
-    const result = await execute(command);
-
-    // Log response received
-    logger.log(`Claude CLI responded (${result.length} chars)`);
-
-    // Clean up temp file
-    jetpack.remove(tempFile);
-
-    // Parse result - extract JSON from response
-    const jsonMatch = result.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in Claude response');
+      jetpack.dir(langDir);
+      jetpack.write(langMessagesPath, JSON.stringify(translations[lang], null, 2));
+      logger.log(`[${lang}] Messages translation saved`);
     }
 
-    // Log success
-    logger.log('Parsed JSON successfully');
-
-    return JSON.parse(jsonMatch[0]);
+    // Update cache
+    updateCacheHash('messages', sourceContent);
   } catch (e) {
-    // Clean up temp file on error
-    jetpack.remove(tempFile);
-    throw new Error(`Claude CLI failed: ${e.message}`);
+    logger.error(`Messages translation failed: ${e.message}`);
   }
+
+  // Log
+  logger.log('Messages translation finished!');
+
+  // Complete
+  return complete();
+}
+
+// Translate description.md into all configured languages
+// Only runs in build mode
+async function translateDescription(complete) {
+  // Only run in build mode
+  if (!Manager.isBuildMode()) {
+    logger.log('Skipping description translation (not in build mode)');
+    return complete();
+  }
+
+  // Log
+  logger.log('Starting description translation...');
+
+  // Check if English description exists
+  if (!jetpack.exists(configDescriptionPath)) {
+    logger.log('config/description.md not found, skipping');
+    return complete();
+  }
+
+  // Read English description
+  const enDescription = jetpack.read(configDescriptionPath);
+  if (!enDescription || !enDescription.trim()) {
+    logger.warn('config/description.md is empty, skipping');
+    return complete();
+  }
+
+  // Check if source has changed
+  if (!hasSourceChanged('description', enDescription)) {
+    logger.log('config/description.md unchanged since last translation, skipping');
+    return complete();
+  }
+
+  logger.log(`Found config/description.md (${enDescription.length} chars)`);
+
+  // Batch languages into chunks to avoid output size limits
+  const BATCH_SIZE = 4;
+  const batches = chunkObject(LANGUAGES, BATCH_SIZE);
+
+  logger.log(`Translating description into ${Object.keys(LANGUAGES).length} languages (${batches.length} batches of ${BATCH_SIZE})...`);
+
+  // Ensure description directory exists
+  jetpack.dir(descriptionDir);
+
+  try {
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      const languageList = Object.entries(batch)
+        .map(([code, name]) => `- "${code}": ${name}`)
+        .join('\n');
+
+      logger.log(`Batch ${i + 1}/${batches.length}: translating ${Object.keys(batch).join(', ')}...`);
+
+      const translations = await callClaude(`Translate the following Chrome extension store description from English to multiple languages.
+
+TARGET LANGUAGES:
+${languageList}
+
+IMPORTANT RULES:
+1. Translate ALL text content including emoji labels and descriptions
+2. Keep all emojis exactly as they are
+3. Preserve the markdown formatting (headers, bold, bullet points, etc.)
+4. Keep brand names, product names, and company names in English (e.g., Amazon, Capital One, NordVPN)
+5. Maintain the same tone — enthusiastic, conversational, and persuasive
+6. Return ONLY valid JSON, no markdown code fences, no explanation
+7. Return a JSON object where each key is the language code and the value is the full translated description as a string
+
+INPUT (English):
+${enDescription}
+
+OUTPUT FORMAT:
+{
+${Object.keys(batch).map((code) => `  "${code}": "full translated description here..."`).join(',\n')}
+}
+
+Output the translated JSON:`);
+
+      // Write each translation in this batch
+      for (const lang of Object.keys(batch)) {
+        if (!translations[lang]) {
+          logger.warn(`[${lang}] No description translation returned`);
+          continue;
+        }
+
+        jetpack.write(path.join(descriptionDir, `${lang}.md`), translations[lang]);
+        logger.log(`[${lang}] Description translation saved`);
+      }
+    }
+
+    // Update cache
+    updateCacheHash('description', enDescription);
+  } catch (e) {
+    logger.error(`Description translation failed: ${e.message}`);
+  }
+
+  // Log
+  logger.log('Description translation finished!');
+
+  // Complete
+  return complete();
 }
 
 // Export task
-module.exports = series(translate);
+module.exports = series(copyConfigFiles, translateMessages, translateDescription);

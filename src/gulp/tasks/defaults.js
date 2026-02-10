@@ -66,10 +66,16 @@ const FILE_MAP = {
     mergeLines: true,
   },
 
-  // Config file with smart merging
+  // Config files
   'config/browser-extension-manager.json': {
     overwrite: true,
     merge: true,
+  },
+  'config/messages.json': {
+    overwrite: false,
+  },
+  'config/description.md': {
+    overwrite: false,
   },
 
   // Files to run templating on
