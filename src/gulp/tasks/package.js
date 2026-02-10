@@ -529,6 +529,49 @@ function liveReload() {
   return;
 }
 
+// Deploy store submission assets to packaged/assets/
+async function deployStoreAssets() {
+  const assetsDir = path.join('packaged', 'assets');
+
+  // Copy 128x128 icon for store submission
+  const iconSrc = path.join('dist', 'assets', 'images', 'icons', 'icon-128x.png');
+  if (jetpack.exists(iconSrc)) {
+    const iconDest = path.join(assetsDir, 'icon', 'icon-128x.png');
+    jetpack.dir(path.dirname(iconDest));
+    jetpack.copy(iconSrc, iconDest, { overwrite: true });
+    logger.log('Store asset: icon-128x.png');
+  }
+
+  // Copy English description
+  const enDescSrc = path.join(process.cwd(), 'config', 'description.md');
+  if (jetpack.exists(enDescSrc)) {
+    const descDir = path.join(assetsDir, 'description');
+    jetpack.dir(descDir);
+    jetpack.copy(enDescSrc, path.join(descDir, 'en.md'), { overwrite: true });
+    logger.log('Store asset: description/en.md');
+  }
+
+  // Copy cached translated descriptions
+  const cacheDescDir = path.join(process.cwd(), '.cache', 'translations', 'description');
+  if (jetpack.exists(cacheDescDir)) {
+    const descDir = path.join(assetsDir, 'description');
+    jetpack.dir(descDir);
+
+    let count = 0;
+    const files = jetpack.find(cacheDescDir, { matching: '*.md' });
+
+    for (const file of files) {
+      const fileName = path.basename(file);
+      jetpack.copy(file, path.join(descDir, fileName), { overwrite: true });
+      count++;
+    }
+
+    if (count > 0) {
+      logger.log(`Store asset: ${count} translated descriptions`);
+    }
+  }
+}
+
 // Package Task
 async function packageFn(complete) {
   try {
@@ -549,6 +592,9 @@ async function packageFn(complete) {
 
     // Run packageSource
     await packageSource();
+
+    // Deploy store submission assets
+    await deployStoreAssets();
 
     // Run build:post hook
     await hook('build:post', index);
