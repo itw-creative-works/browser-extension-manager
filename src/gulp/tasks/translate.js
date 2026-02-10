@@ -14,55 +14,55 @@ const { limits: LOCALE_LIMITS, languages: LANGUAGES } = require('../config/local
 // Paths
 const configMessagesPath = path.join(process.cwd(), 'config', 'messages.json');
 const configDescriptionPath = path.join(process.cwd(), 'config', 'description.md');
-const localesDir = path.join(process.cwd(), 'src', '_locales');
-const enMessagesPath = path.join(localesDir, 'en', 'messages.json');
-const translationsDir = path.join(process.cwd(), 'packaged', 'translations');
-const descriptionDir = path.join(translationsDir, 'description');
-const cacheDir = path.join(process.cwd(), '.cache');
-const cachePath = path.join(cacheDir, 'translate.json');
+const distLocalesDir = path.join(process.cwd(), 'dist', '_locales');
 
-// Helper: Compute hash of a string
+// Cache paths — translations are persisted in .cache/ so they survive clean
+const cacheDir = path.join(process.cwd(), '.cache');
+const cacheHashPath = path.join(cacheDir, 'translate.json');
+const cacheMessagesDir = path.join(cacheDir, 'translations', 'messages');
+const cacheDescriptionDir = path.join(cacheDir, 'translations', 'description');
+
+// Helper: Compute MD5 hash of a string
 function hash(content) {
   return crypto.createHash('md5').update(content).digest('hex');
 }
 
-// Helper: Read cache
-function readCache() {
-  if (!jetpack.exists(cachePath)) {
+// Helper: Read cache hashes
+function readCacheHashes() {
+  if (!jetpack.exists(cacheHashPath)) {
     return {};
   }
 
   try {
-    return JSON.parse(jetpack.read(cachePath));
+    return JSON.parse(jetpack.read(cacheHashPath));
   } catch (e) {
     return {};
   }
 }
 
-// Helper: Write cache
-function writeCache(cache) {
+// Helper: Write cache hashes
+function writeCacheHashes(cache) {
   jetpack.dir(cacheDir);
-  jetpack.write(cachePath, JSON.stringify(cache, null, 2));
+  jetpack.write(cacheHashPath, JSON.stringify(cache, null, 2));
 }
 
 // Helper: Check if source has changed since last translation
 function hasSourceChanged(cacheKey, content) {
-  const cache = readCache();
-  const currentHash = hash(content);
+  const cache = readCacheHashes();
 
-  return cache[cacheKey] !== currentHash;
+  return cache[cacheKey] !== hash(content);
 }
 
 // Helper: Update cache hash for a source
 function updateCacheHash(cacheKey, content) {
-  const cache = readCache();
+  const cache = readCacheHashes();
 
   cache[cacheKey] = hash(content);
 
-  writeCache(cache);
+  writeCacheHashes(cache);
 }
 
-// Helper: Read and parse config/messages.json
+// Helper: Read and parse config/messages.json (JSON5 → object)
 function readConfigMessages() {
   if (!jetpack.exists(configMessagesPath)) {
     return null;
@@ -122,17 +122,40 @@ function chunkObject(obj, size) {
   return chunks;
 }
 
-// Copy config files to src/ locations
-// Always runs (dev + build) so distribute task has the latest files
-async function copyConfigFiles(complete) {
-  // Copy config/messages.json → src/_locales/en/messages.json
+// Deploy cached translations to dist/_locales/
+// Always runs (dev + build) so package task has all locale files
+async function deployTranslations(complete) {
+  // Deploy EN messages from config/messages.json → dist/_locales/en/messages.json
   const enMessages = readConfigMessages();
   if (enMessages) {
-    jetpack.dir(path.join(localesDir, 'en'));
-    jetpack.write(enMessagesPath, JSON.stringify(enMessages, null, 2));
-    logger.log('Copied config/messages.json → src/_locales/en/messages.json');
+    const enDir = path.join(distLocalesDir, 'en');
+    jetpack.dir(enDir);
+    jetpack.write(path.join(enDir, 'messages.json'), JSON.stringify(enMessages, null, 2));
+    logger.log('Deployed config/messages.json → dist/_locales/en/messages.json');
   } else {
     logger.warn('config/messages.json not found or invalid, skipping');
+  }
+
+  // Deploy cached message translations → dist/_locales/{lang}/messages.json
+  if (jetpack.exists(cacheMessagesDir)) {
+    let count = 0;
+
+    for (const lang of Object.keys(LANGUAGES)) {
+      const cachedPath = path.join(cacheMessagesDir, `${lang}.json`);
+
+      if (!jetpack.exists(cachedPath)) {
+        continue;
+      }
+
+      const langDir = path.join(distLocalesDir, lang);
+      jetpack.dir(langDir);
+      jetpack.copy(cachedPath, path.join(langDir, 'messages.json'), { overwrite: true });
+      count++;
+    }
+
+    if (count > 0) {
+      logger.log(`Deployed ${count} cached message translations to dist/_locales/`);
+    }
   }
 
   // Complete
@@ -211,23 +234,38 @@ OUTPUT FORMAT:
 
 Output the translated JSON:`);
 
-    // Write each translation
+    // Ensure cache directory exists
+    jetpack.dir(cacheMessagesDir);
+
+    let savedCount = 0;
+
+    // Write each translation to cache and dist
     for (const lang of Object.keys(LANGUAGES)) {
       if (!translations[lang]) {
         logger.warn(`[${lang}] No translation returned`);
         continue;
       }
 
-      const langDir = path.join(localesDir, lang);
-      const langMessagesPath = path.join(langDir, 'messages.json');
+      const content = JSON.stringify(translations[lang], null, 2);
 
+      // Save to cache
+      jetpack.write(path.join(cacheMessagesDir, `${lang}.json`), content);
+
+      // Save to dist
+      const langDir = path.join(distLocalesDir, lang);
       jetpack.dir(langDir);
-      jetpack.write(langMessagesPath, JSON.stringify(translations[lang], null, 2));
+      jetpack.write(path.join(langDir, 'messages.json'), content);
+
       logger.log(`[${lang}] Messages translation saved`);
+      savedCount++;
     }
 
-    // Update cache
-    updateCacheHash('messages', sourceContent);
+    // Only update cache hash if we saved all translations
+    if (savedCount === Object.keys(LANGUAGES).length) {
+      updateCacheHash('messages', sourceContent);
+    } else {
+      logger.warn(`Only ${savedCount}/${Object.keys(LANGUAGES).length} translations saved, not updating cache hash`);
+    }
   } catch (e) {
     logger.error(`Messages translation failed: ${e.message}`);
   }
@@ -278,8 +316,10 @@ async function translateDescription(complete) {
 
   logger.log(`Translating description into ${Object.keys(LANGUAGES).length} languages (${batches.length} batches of ${BATCH_SIZE})...`);
 
-  // Ensure description directory exists
-  jetpack.dir(descriptionDir);
+  // Ensure cache directory exists
+  jetpack.dir(cacheDescriptionDir);
+
+  let totalSaved = 0;
 
   try {
     for (let i = 0; i < batches.length; i++) {
@@ -314,20 +354,25 @@ ${Object.keys(batch).map((code) => `  "${code}": "full translated description he
 
 Output the translated JSON:`);
 
-      // Write each translation in this batch
+      // Write each translation in this batch to cache
       for (const lang of Object.keys(batch)) {
         if (!translations[lang]) {
           logger.warn(`[${lang}] No description translation returned`);
           continue;
         }
 
-        jetpack.write(path.join(descriptionDir, `${lang}.md`), translations[lang]);
+        jetpack.write(path.join(cacheDescriptionDir, `${lang}.md`), translations[lang]);
         logger.log(`[${lang}] Description translation saved`);
+        totalSaved++;
       }
     }
 
-    // Update cache
-    updateCacheHash('description', enDescription);
+    // Only update cache hash if we saved all translations
+    if (totalSaved === Object.keys(LANGUAGES).length) {
+      updateCacheHash('description', enDescription);
+    } else {
+      logger.warn(`Only ${totalSaved}/${Object.keys(LANGUAGES).length} description translations saved, not updating cache hash`);
+    }
   } catch (e) {
     logger.error(`Description translation failed: ${e.message}`);
   }
@@ -340,4 +385,4 @@ Output the translated JSON:`);
 }
 
 // Export task
-module.exports = series(copyConfigFiles, translateMessages, translateDescription);
+module.exports = series(deployTranslations, translateMessages, translateDescription);
