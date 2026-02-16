@@ -76,7 +76,7 @@ function readConfigMessages() {
   }
 }
 
-// Helper: Call Claude Agent SDK with a prompt and parse JSON from the response
+// Helper: Call Claude Agent SDK and return raw text
 async function callClaude(prompt) {
   let result = '';
 
@@ -101,13 +101,34 @@ async function callClaude(prompt) {
 
   logger.log(`Claude responded (${result.length} chars)`);
 
-  // Parse JSON from response
-  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  return result;
+}
+
+// Helper: Parse JSON from Claude response text
+function parseJsonResponse(text) {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error('No JSON found in Claude response');
   }
 
   return JSON.parse(jsonMatch[0]);
+}
+
+// Helper: Parse delimited sections from Claude response
+// Expects format: ===LANG_CODE===\ncontent\n===LANG_CODE===\ncontent
+function parseDelimitedResponse(text, langCodes) {
+  const result = {};
+
+  for (const code of langCodes) {
+    const pattern = new RegExp(`===${code}===\\n([\\s\\S]*?)(?=====[a-z]{2}===|$)`);
+    const match = text.match(pattern);
+
+    if (match) {
+      result[code] = match[1].trim();
+    }
+  }
+
+  return result;
 }
 
 // Helper: Split an object into chunks of a given size
@@ -205,7 +226,7 @@ async function translateMessages(complete) {
   logger.log(`Translating messages into ${Object.keys(LANGUAGES).length} languages...`);
 
   try {
-    const translations = await callClaude(`Translate the following Chrome extension messages.json content from English to multiple languages.
+    const translations = parseJsonResponse(await callClaude(`Translate the following Chrome extension messages.json content from English to multiple languages.
 
 TARGET LANGUAGES:
 ${languageList}
@@ -232,7 +253,7 @@ OUTPUT FORMAT:
   ...
 }
 
-Output the translated JSON:`);
+Output the translated JSON:`));
 
     // Ensure cache directory exists
     jetpack.dir(cacheMessagesDir);
@@ -330,7 +351,8 @@ async function translateDescription(complete) {
 
       logger.log(`Batch ${i + 1}/${batches.length}: translating ${Object.keys(batch).join(', ')}...`);
 
-      const translations = await callClaude(`Translate the following Chrome extension store description from English to multiple languages.
+      const langCodes = Object.keys(batch);
+      const translations = parseDelimitedResponse(await callClaude(`Translate the following Chrome extension store description from English to multiple languages.
 
 TARGET LANGUAGES:
 ${languageList}
@@ -341,21 +363,19 @@ IMPORTANT RULES:
 3. Preserve the markdown formatting (headers, bold, bullet points, etc.)
 4. Keep brand names, product names, and company names in English (e.g., Amazon, Capital One, NordVPN)
 5. Maintain the same tone — enthusiastic, conversational, and persuasive
-6. Return ONLY valid JSON, no markdown code fences, no explanation
-7. Return a JSON object where each key is the language code and the value is the full translated description as a string
+6. Output each translation separated by a delimiter line: ==={lang_code}===
+7. Do NOT wrap in JSON or code fences — just raw translated text between delimiters
 
 INPUT (English):
 ${enDescription}
 
-OUTPUT FORMAT:
-{
-${Object.keys(batch).map((code) => `  "${code}": "full translated description here..."`).join(',\n')}
-}
+OUTPUT FORMAT (use exactly this delimiter format):
+${langCodes.map((code) => `===${code}===\nFull translated description here...`).join('\n')}
 
-Output the translated JSON:`);
+Output the translations now:`), langCodes);
 
       // Write each translation in this batch to cache
-      for (const lang of Object.keys(batch)) {
+      for (const lang of langCodes) {
         if (!translations[lang]) {
           logger.warn(`[${lang}] No description translation returned`);
           continue;
