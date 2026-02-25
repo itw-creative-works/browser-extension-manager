@@ -30,6 +30,7 @@ Extensions are organized around **components**, each representing a distinct par
 - `sidepanel` - Chrome side panel
 - `content` - Content scripts injected into web pages
 - `pages` - Custom extension pages (e.g., dashboard, welcome)
+- `offscreen` - Persistent offscreen document (WebSocket, long-running tasks)
 
 **Each component has three parts:**
 1. **View** - HTML in `src/views/[component]/index.html`

@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.3.35",
+  "version": "1.3.36",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -26,10 +26,11 @@
     "wm:local": "npm uninstall web-manager && npm i ../web-manager"
   },
   "bin": {
-    "ext": "bin/browser-extension-manager",
     "xm": "bin/browser-extension-manager",
     "bxm": "bin/browser-extension-manager",
-    "browser-extension-manager": "bin/browser-extension-manager"
+    "browser-extension-manager": "bin/browser-extension-manager",
+    "ext": "bin/browser-extension-manager",
+    "mgr": "bin/browser-extension-manager"
   },
   "preparePackage": {
     "input": "./src",
