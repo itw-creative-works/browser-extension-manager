@@ -98,6 +98,12 @@ async function publish(complete) {
     return complete();
   }
 
+  // Check for local packages
+  const allDeps = JSON.stringify(project.dependencies || {}) + JSON.stringify(project.devDependencies || {});
+  if (allDeps.includes('file:')) {
+    throw new Error('Please remove local packages before publishing!');
+  }
+
   // Log
   logger.log('Starting publish...');
 
