@@ -98,10 +98,10 @@ async function generateBuildJs(outputDir) {
         refreshNewVersion: { enabled: true, config: {} },
         serviceWorker: { enabled: false, config: {} },
 
-        // Tracking
-        tracking: {
-          'google-analytics': config.google_analytics?.id || '',
-          'google-analytics-secret': config.google_analytics?.secret || '',
+        // Analytics
+        analytics: {
+          google: config.analytics?.providers?.google?.id || '',
+          googleSecret: config.analytics?.providers?.google?.secret || '',
         },
 
         // Theme config

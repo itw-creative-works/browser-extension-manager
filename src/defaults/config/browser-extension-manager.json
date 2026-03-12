@@ -18,9 +18,13 @@
   sentry: {
     dsn: '',
   },
-  google_analytics: {
-    id: '',
-    secret: '',
+  analytics: {
+    providers: {
+      google: {
+        id: '',
+        secret: '',
+      },
+    },
   },
   firebaseConfig: {
     apiKey: 'AIzaSyD1MvM-EQC_eVWqaTe5ImWALwhBr7iXgh8',
