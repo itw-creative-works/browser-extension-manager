@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.3.40] - 2026-03-14
+### Changed
+- Migrated `app` references to `brand` namespace (`this.app` → `this.brand.id`, `options.app.id` → `options.brand.id`)
+- Nested brand image properties under `brand.images.*` (`brandmark`, `wordmark`, `combomark`)
+
 ## [1.3.17] - 2025-12-23
 ### Changed
 - Auth system now uses messaging instead of `chrome.storage` for cross-context sync

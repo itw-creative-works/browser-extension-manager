@@ -445,13 +445,15 @@ function getTemplateReplaceOptions() {
     environment: options.environment || 'production',
     buildTime: now,
     brand: {
-      id: options.app?.id || 'extension',
+      id: options.brand?.id || 'extension',
       name: options.brand?.name || 'Extension',
       url: options.brand?.url || '',
       email: options.brand?.email || '',
-      brandmark: options.brand?.brandmark || '',
-      wordmark: options.brand?.wordmark || '',
-      combomark: options.brand?.combomark || '',
+      images: {
+        brandmark: options.brand?.images?.brandmark || '',
+        wordmark: options.brand?.images?.wordmark || '',
+        combomark: options.brand?.images?.combomark || '',
+      },
     },
     auth: webManagerConfig.auth || { enabled: true, config: {} },
     firebase: {

@@ -32,7 +32,7 @@ class Manager {
     // Defaults
     this.version = this.config?.version || 'unknown';
     this.brand = this.config?.brand || { name: 'unknown' };
-    this.app = this.config?.app?.id || 'extension';
+    this.brand.id = this.config?.brand?.id || 'extension';
     this.environment = this.config?.bxm?.environment || 'production';
     this.libraries = {
       firebase: null,
@@ -83,7 +83,7 @@ class Manager {
   parseConfiguration() {
     try {
       // Set cache name
-      this.cache.name = `${this.app}-${this.cache.breaker}`;
+      this.cache.name = `${this.brand.id}-${this.cache.breaker}`;
     } catch (e) {
       this.logger.error('Error parsing configuration', e);
     }
