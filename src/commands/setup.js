@@ -177,6 +177,9 @@ function setupScripts() {
     project.scripts[key] = package.projectScripts[key];
   });
 
+  // Ensure the project is private (extensions should never be published to npm)
+  project.private = true;
+
   // Save the project
   jetpack.write(path.join(process.cwd(), 'package.json'), project);
 }
