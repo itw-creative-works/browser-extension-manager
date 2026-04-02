@@ -1,5 +1,5 @@
 // Libraries
-import { Manager as WebManager } from 'web-manager';
+import webManager from 'web-manager';
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
 import { syncWithBackground, setupAuthBroadcastListener, setupSignOutListener, setupAuthEventListeners, openAuthPage as openAuthPageHelper } from './lib/auth-helpers.js';
@@ -14,7 +14,7 @@ class Manager {
     this.extension = null;
     this.messenger = null;
     this.logger = null;
-    this.webManager = null;
+    this.webManager = webManager;
   }
 
   async initialize() {
@@ -25,7 +25,6 @@ class Manager {
     this.extension = extension;
     this.messenger = null;
     this.logger = new LoggerLite('options');
-    this.webManager = new WebManager();
 
     // Initialize
     await this.webManager.initialize(configuration);
