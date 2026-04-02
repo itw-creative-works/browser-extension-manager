@@ -15,6 +15,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.3.48] - 2026-04-02
+### Changed
+- Replaced `.npmignore` with `files` field in package.json for safer npm publish allowlist
+- Bumped `web-manager` from ^4.1.33 to ^4.1.36
+
+### Removed
+- `.npmignore` file (superseded by `files` field)
+
+## [1.3.46] - 2026-04-02
+### Changed
+- Switched web-manager to singleton import across all context managers (popup, options, sidepanel, page)
+- Web Manager instance is now assigned in constructor instead of creating a new instance during `initialize()`
+
 ## [1.3.44] - 2026-04-01
 ### Changed
 - Bumped `@anthropic-ai/claude-agent-sdk` from ^0.2.76 to ^0.2.90
