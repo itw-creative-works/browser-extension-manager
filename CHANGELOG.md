@@ -15,6 +15,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.3.44] - 2026-04-01
+### Changed
+- Bumped `@anthropic-ai/claude-agent-sdk` from ^0.2.76 to ^0.2.90
+- Bumped `@babel/preset-env` from ^7.29.0 to ^7.29.2
+- Bumped `dotenv` from ^17.3.1 to ^17.4.0
+- Bumped `lodash` from ^4.17.23 to ^4.18.1
+- Bumped `minimatch` from ^10.2.4 to ^10.2.5
+- Bumped `web-manager` from ^4.1.28 to ^4.1.33
+- Bumped `ws` from ^8.19.0 to ^8.20.0
+
 ## [1.3.43] - 2026-03-16
 ### Added
 - Set `private: true` on consuming projects during setup to prevent accidental npm publishes
