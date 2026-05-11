@@ -2,7 +2,7 @@
 const Manager = new (require('../../build.js'));
 const logger = Manager.logger('defaults');
 const { src, dest, watch, series } = require('gulp');
-const through2 = require('through2');
+const { Transform } = require('node:stream');
 const jetpack = require('fs-jetpack');
 const path = require('path');
 const { minimatch } = require('minimatch');
@@ -347,7 +347,9 @@ function defaults(complete, changedFile) {
 }
 
 function customTransform() {
-  return through2.obj(function (file, _, callback) {
+  return new Transform({
+    objectMode: true,
+    transform(file, _, callback) {
     // Skip if it's a directory
     if (file.isDirectory()) {
       return callback(null, file);
@@ -477,6 +479,7 @@ function customTransform() {
 
     // Complete
     return callback();
+    },
   });
 }
 function defaultsWatcher(complete) {

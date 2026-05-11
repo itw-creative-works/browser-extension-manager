@@ -2,7 +2,7 @@
 const Manager = new (require('../../build.js'));
 const logger = Manager.logger('html');
 const { src, dest, watch, series } = require('gulp');
-const through2 = require('through2');
+const { Transform } = require('node:stream');
 const jetpack = require('fs-jetpack');
 const path = require('path');
 const { template } = require('node-powertools');
@@ -51,86 +51,89 @@ function html(complete) {
 
 // Process HTML transform
 function processHtml(templateContent) {
-  return through2.obj(function (file, _, callback) {
-    // Skip if it's a directory
-    if (file.isDirectory()) {
-      return callback(null, file);
-    }
-
-    try {
-      // Get the view name from the file path
-      const viewName = path.basename(file.path, '.html');
-      const relativePath = path.relative(path.join(rootPathProject, 'src/views'), file.dirname);
-      const viewNameWithPath = relativePath ? `${relativePath}/${viewName}` : viewName;
-
-      // Read the content (body HTML)
-      const bodyContent = file.contents.toString();
-
-      // Determine the component name for CSS/JS loading
-      // Template already includes /components/ prefix, so just provide the component path
-      // Pages can have multiple files (index, pricing, login, etc.)
-      // Other components (popup, options, etc.) only have index.html
-      let componentName;
-      if (relativePath.startsWith('pages/') || relativePath === 'pages') {
-        // Pages directory: include full path with filename
-        // pages/index.html -> pages/index
-        // pages/pricing.html -> pages/pricing
-        componentName = viewNameWithPath;
-      } else if (relativePath && viewName === 'index') {
-        // Other components with index.html: use just the directory name
-        // popup/index.html -> popup
-        // options/index.html -> options
-        componentName = relativePath;
-      } else if (relativePath) {
-        // Non-index files in other directories: use full path
-        componentName = viewNameWithPath;
-      } else {
-        // No path: use viewName
-        componentName = viewName;
+  return new Transform({
+    objectMode: true,
+    transform(file, _, callback) {
+      // Skip if it's a directory
+      if (file.isDirectory()) {
+        return callback(null, file);
       }
 
-      // Prepare template data
-      const data = {
-        content: bodyContent,
-        page: {
-          name: componentName,
-          path: viewNameWithPath,
-          title: config.brand?.name || 'Extension',
-        },
-        theme: {
-          appearance: config.theme?.appearance || 'dark',
-        },
-        brand: config.brand || {},
-        cacheBust: Date.now(),
-      };
+      try {
+        // Get the view name from the file path
+        const viewName = path.basename(file.path, '.html');
+        const relativePath = path.relative(path.join(rootPathProject, 'src/views'), file.dirname);
+        const viewNameWithPath = relativePath ? `${relativePath}/${viewName}` : viewName;
 
-      // Apply template with custom brackets
-      // First, template the body content to replace any {{ }} placeholders in the view
-      const templatedBody = template(bodyContent, data, {
-        brackets: ['{{', '}}'],
-      });
+        // Read the content (body HTML)
+        const bodyContent = file.contents.toString();
 
-      // Update data with templated body
-      data.content = templatedBody;
+        // Determine the component name for CSS/JS loading
+        // Template already includes /components/ prefix, so just provide the component path
+        // Pages can have multiple files (index, pricing, login, etc.)
+        // Other components (popup, options, etc.) only have index.html
+        let componentName;
+        if (relativePath.startsWith('pages/') || relativePath === 'pages') {
+          // Pages directory: include full path with filename
+          // pages/index.html -> pages/index
+          // pages/pricing.html -> pages/pricing
+          componentName = viewNameWithPath;
+        } else if (relativePath && viewName === 'index') {
+          // Other components with index.html: use just the directory name
+          // popup/index.html -> popup
+          // options/index.html -> options
+          componentName = relativePath;
+        } else if (relativePath) {
+          // Non-index files in other directories: use full path
+          componentName = viewNameWithPath;
+        } else {
+          // No path: use viewName
+          componentName = viewName;
+        }
 
-      // Then template the outer page template
-      const rendered = template(templateContent, data, {
-        brackets: ['{{', '}}'],
-      });
+        // Prepare template data
+        const data = {
+          content: bodyContent,
+          page: {
+            name: componentName,
+            path: viewNameWithPath,
+            title: config.brand?.name || 'Extension',
+          },
+          theme: {
+            appearance: config.theme?.appearance || 'dark',
+          },
+          brand: config.brand || {},
+          cacheBust: Date.now(),
+        };
 
-      // Update file contents
-      file.contents = Buffer.from(rendered);
+        // Apply template with custom brackets
+        // First, template the body content to replace any {{ }} placeholders in the view
+        const templatedBody = template(bodyContent, data, {
+          brackets: ['{{', '}}'],
+        });
 
-      // Log
-      logger.log(`Processed: ${viewNameWithPath}.html`);
+        // Update data with templated body
+        data.content = templatedBody;
 
-      // Push the file
-      this.push(file);
-      return callback();
-    } catch (error) {
-      logger.error('Error processing HTML:', error);
-      return callback(error);
-    }
+        // Then template the outer page template
+        const rendered = template(templateContent, data, {
+          brackets: ['{{', '}}'],
+        });
+
+        // Update file contents
+        file.contents = Buffer.from(rendered);
+
+        // Log
+        logger.log(`Processed: ${viewNameWithPath}.html`);
+
+        // Push the file
+        this.push(file);
+        return callback();
+      } catch (error) {
+        logger.error('Error processing HTML:', error);
+        return callback(error);
+      }
+    },
   });
 }
 

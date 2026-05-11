@@ -2,7 +2,7 @@
 const Manager = new (require('../../build.js'));
 const logger = Manager.logger('distribute');
 const { src, dest, watch, series } = require('gulp');
-const through2 = require('through2');
+const { Transform } = require('node:stream');
 const path = require('path');
 const jetpack = require('fs-jetpack');
 const createTemplateTransform = require('./utils/template-transform');
@@ -101,38 +101,41 @@ function distribute() {
 }
 
 function customTransform() {
-  return through2.obj(function (file, _, callback) {
-    // Skip if it's a directory
-    if (file.isDirectory()) {
-      return callback(null, file);
-    }
+  return new Transform({
+    objectMode: true,
+    transform(file, _, callback) {
+      // Skip if it's a directory
+      if (file.isDirectory()) {
+        return callback(null, file);
+      }
 
-    // Get relative path from src base
-    const relativePath = path.relative(file.base, file.path).replace(/\\/g, '/');
+      // Get relative path from src base
+      const relativePath = path.relative(file.base, file.path).replace(/\\/g, '/');
 
-    // Log
-    if (LOUD) {
-      logger.log(`Processing file: ${relativePath}`);
-    }
+      // Log
+      if (LOUD) {
+        logger.log(`Processing file: ${relativePath}`);
+      }
 
-    // Change path if it starts with 'pages/'
-    // if (relativePath.startsWith('pages/')) {
-    //   // Remove 'pages/' prefix
-    //   const newRelativePath = relativePath.replace(/^pages\//, '');
+      // Change path if it starts with 'pages/'
+      // if (relativePath.startsWith('pages/')) {
+      //   // Remove 'pages/' prefix
+      //   const newRelativePath = relativePath.replace(/^pages\//, '');
 
-    //   // Update file path to remove pages directory
-    //   // This will make src/pages/index.html -> dist/index.html
-    //   file.path = path.join(file.base, newRelativePath);
+      //   // Update file path to remove pages directory
+      //   // This will make src/pages/index.html -> dist/index.html
+      //   file.path = path.join(file.base, newRelativePath);
 
-    //   // Log
-    //   logger.log(`  -> Moving from pages/ to root: ${newRelativePath}`);
-    // }
+      //   // Log
+      //   logger.log(`  -> Moving from pages/ to root: ${newRelativePath}`);
+      // }
 
-    // Push the file
-    this.push(file);
+      // Push the file
+      this.push(file);
 
-    // Continue
-    callback();
+      // Continue
+      callback();
+    },
   });
 }
 

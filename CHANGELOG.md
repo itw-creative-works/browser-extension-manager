@@ -15,6 +15,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.3.49] - 2026-05-10
+### Removed
+- `through2` dependency. Replaced with native `node:stream` `Transform` across 4 gulp task files (`defaults.js`, `distribute.js`, `html.js`, `utils/template-transform.js`). through2@5 became ESM-only with no `require` condition in its exports, breaking CJS require; the built-in `Transform` is a drop-in replacement
+
+### Changed
+- Bumped `@anthropic-ai/claude-agent-sdk` from ^0.2.90 to ^0.2.138
+- Bumped `@babel/preset-env` from ^7.29.2 to ^7.29.5
+- Bumped `dotenv` from ^17.4.0 to ^17.4.2
+- Bumped `gulp-filter` from ^9.0.1 to ^10.0.0
+- Bumped `sass` from ^1.98.0 to ^1.99.0
+- Bumped `web-manager` from ^4.1.36 to ^4.1.41
+- Bumped `webpack` from ^5.105.4 to ^5.106.2
+- Bumped `wonderful-fetch` from ^2.0.4 to ^2.0.5
+- Bumped `prepare-package` from ^2.0.7 to ^2.1.0
+
+---
 ## [1.3.48] - 2026-04-02
 ### Changed
 - Replaced `.npmignore` with `files` field in package.json for safer npm publish allowlist
