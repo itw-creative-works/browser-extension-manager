@@ -1,6 +1,7 @@
 // Libraries
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
+import { attachTo as attachModeHelpers } from './utils/mode-helpers.js';
 
 // Firebase (static imports - dynamic import() doesn't work in service workers with webpack chunking)
 import { initializeApp, getApp } from 'firebase/app';
@@ -659,6 +660,9 @@ function setupGlobalHandlers() {
     notification.close();
   });
 }
+
+// Cross-context helpers — Manager.isTesting() / isDevelopment() / etc.
+attachModeHelpers(Manager);
 
 // Export
 export default Manager;

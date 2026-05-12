@@ -196,5 +196,8 @@ Manager.logMemory = function (logger, label) {
 };
 Manager.prototype.logMemory = Manager.logMemory;
 
+// Cross-context helpers — Manager.isTesting() / isDevelopment() / etc.
+require('./utils/mode-helpers.js').attachTo(Manager);
+
 // Export
 module.exports = Manager;

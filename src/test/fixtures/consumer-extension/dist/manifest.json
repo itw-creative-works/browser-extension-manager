@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "BXM Fixture Consumer",
+  "version": "0.1.0",
+  "description": "Used by BXM's boot-layer tests as a stand-in for a real consumer extension.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BXM Fixture Consumer"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "storage"
+  ]
+}

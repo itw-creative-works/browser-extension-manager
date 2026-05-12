@@ -66,6 +66,15 @@ const FILE_MAP = {
     mergeLines: true,
   },
 
+  // Consumer CLAUDE.md uses the same marker-based merge as .env/.gitignore.
+  // Framework owns the Default section; consumer owns everything below the Custom marker.
+  // Must come AFTER `**/*.md` (which sets overwrite: false) — `getFileOptions` does
+  // last-match-wins, so this rule's `mergeLines: true` activates the merge path even though
+  // the catch-all would otherwise skip.
+  'CLAUDE.md': {
+    mergeLines: true,
+  },
+
   // Config files
   'config/browser-extension-manager.json': {
     overwrite: true,
@@ -270,8 +279,12 @@ function mergeLineBasedFiles(existingContent, newContent, fileName) {
   result.push(DEFAULT_SECTION_MARKER);
   result.push(...mergedDefaultSection);
 
-  // Add custom section
-  result.push('');
+  // Add custom section. Insert a single blank line before the marker, but only if the
+  // merged default doesn't already end with one — otherwise we'd accumulate an extra blank
+  // line on every merge, breaking idempotency after the first re-run.
+  if (mergedDefaultSection.length === 0 || mergedDefaultSection[mergedDefaultSection.length - 1].trim() !== '') {
+    result.push('');
+  }
   result.push(CUSTOM_SECTION_MARKER);
 
   // First add any user lines that were in default section (moved to custom)

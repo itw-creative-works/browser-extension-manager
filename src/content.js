@@ -2,6 +2,7 @@
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
 import Affiliatizer from './lib/affiliatizer.js';
+import { attachTo as attachModeHelpers } from './utils/mode-helpers.js';
 
 // Class
 class Manager {
@@ -27,6 +28,9 @@ class Manager {
     return this;
   }
 }
+
+// Cross-context helpers — Manager.isTesting() / isDevelopment() / etc.
+attachModeHelpers(Manager);
 
 // Export
 export default Manager;

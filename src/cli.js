@@ -11,6 +11,7 @@ const ALIASES = {
   clean: ['-c', '--clean'],
   install: ['-i', 'i', '--install'],
   setup: ['-s', '--setup'],
+  test: ['-t', '--test'],
   version: ['-v', '--version'],
 };
 

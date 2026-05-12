@@ -3,6 +3,7 @@ import webManager from 'web-manager';
 import extension from './lib/extension.js';
 import LoggerLite from './lib/logger-lite.js';
 import { syncWithBackground, setupAuthBroadcastListener, setupSignOutListener, setupAuthEventListeners, openAuthPage as openAuthPageHelper } from './lib/auth-helpers.js';
+import { attachTo as attachModeHelpers } from './utils/mode-helpers.js';
 
 // Import theme (exposes Bootstrap to window.bootstrap)
 import '__theme__/_theme.js';
@@ -58,6 +59,9 @@ class Manager {
     openAuthPageHelper(this, options);
   }
 }
+
+// Cross-context helpers — Manager.isTesting() / isDevelopment() / etc.
+attachModeHelpers(Manager);
 
 // Export
 export default Manager;

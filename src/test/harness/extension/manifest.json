@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "BXM Test Harness",
+  "version": "1.0.0",
+  "description": "Loaded by the chromium runner to host background + view layer tests.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BXM Test Harness"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "permissions": [
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ]
+}
