@@ -513,7 +513,8 @@ class Manager {
 
   // Setup livereload
   setupLiveReload() {
-    // Quit if not in dev mode
+    // Dev-only feature — skip in testing and production (environment is one of
+    // 'development' | 'testing' | 'production').
     if (this.environment !== 'development') return;
 
     // Get port from config or use default

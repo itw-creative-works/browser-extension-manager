@@ -138,4 +138,4 @@ In BXM's own self-tests, the boot layer points at a hand-authored fixture extens
 ## See also
 
 - [test-framework.md](test-framework.md) — overall harness, layers, ctx, expect API
-- [cross-context-helpers.md](cross-context-helpers.md) — `Manager.isTesting()` and friends
+- [environment-detection.md](environment-detection.md) — `Manager.isTesting()` and friends

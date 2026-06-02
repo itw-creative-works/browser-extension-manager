@@ -61,7 +61,10 @@ BXM ships a built-in four-layer test framework. Write tests under `test/<layer>/
 npx bxm test                   # all layers
 npx bxm test --layer build     # build layer only (plain Node, fast)
 npx bxm test --layer boot      # real-Chromium end-to-end test
+npx bxm test --integration     # also run integration suites against REAL external services (Firebase, etc.)
 ```
+
+Tests run against the **real** harness — a real MV3 service worker, a real Chromium tab, the real packaged extension. **Never mock** (`chrome`, the Manager, contexts are all real); only pure, I/O-free functions are called directly. Real external APIs are gated behind `--integration` (skipped in-source otherwise, never mocked).
 
 Test files use Jest-compatible matchers:
 

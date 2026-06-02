@@ -91,13 +91,8 @@ Manager.actLikeProduction = function () {
 }
 Manager.prototype.actLikeProduction = Manager.actLikeProduction;
 
-// getEnvironment: returns the environment based on the build mode
-Manager.getEnvironment = function () {
-  return Manager.isBuildMode()
-    ? 'production'
-    : 'development';
-}
-Manager.prototype.getEnvironment = Manager.getEnvironment;
+// getEnvironment() is the SSOT and lives in src/utils/mode-helpers.js (alongside the is*()
+// family). It's mixed onto the Manager via the attachTo() call below, same as in EM/UJM.
 
 // getManifest: requires and parses config.yml
 Manager.getManifest = function () {

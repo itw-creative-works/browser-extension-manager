@@ -58,7 +58,7 @@ Manager.logger(name);        // → new logger('name') instance
 Manager.reportBuildError(e); // → notifly + log
 ```
 
-Cross-context helpers (`isTesting/isDevelopment/isProduction/getVersion`) are available on `Manager` as static methods AND on instances. See [cross-context-helpers.md](cross-context-helpers.md).
+Cross-context helpers (`isTesting/isDevelopment/isProduction/getVersion`) are available on `Manager` as static methods AND on instances. See [environment-detection.md](environment-detection.md).
 
 ## Boot flow inside `initialize()`
 
@@ -90,11 +90,11 @@ attachModeHelpers(Manager);
 export default Manager;
 ```
 
-That gives every Manager `isDevelopment` / `isProduction` / `isTesting` / `getVersion` on both the prototype and the constructor. See [cross-context-helpers.md](cross-context-helpers.md).
+That gives every Manager `isDevelopment` / `isProduction` / `isTesting` / `getVersion` on both the prototype and the constructor. See [environment-detection.md](environment-detection.md).
 
 ## See also
 
 - [components.md](components.md) — the seven component contexts
 - [extension.md](extension.md) — the cross-browser chrome.* API wrapper
 - [auth.md](auth.md) — how background.js coordinates auth across contexts
-- [cross-context-helpers.md](cross-context-helpers.md) — `isTesting / isDevelopment / getVersion`
+- [environment-detection.md](environment-detection.md) — `isTesting / isDevelopment / getVersion`

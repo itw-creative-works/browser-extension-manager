@@ -11,7 +11,7 @@ npx bxm test --layer background       # only background-layer suites (real MV3 S
 npx bxm test --layer view             # only view-layer suites (popup/options/sidepanel)
 npx bxm test --layer boot             # only boot-layer suites (real consumer extension)
 npx bxm test --filter "messaging"     # only suites/tests whose name contains "messaging"
-npx bxm test --integration            # opt in to integration suites (Firebase, etc.)
+npx bxm test --integration            # run integration suites against REAL external services (Firebase, etc.) — normal mode skips them in-source, never mocks them
 npx bxm test --reporter json          # pretty output + machine-readable {"event":"summary",...} line
 BXM_TEST_DEBUG=1 npx bxm test         # see Chromium/SW stderr (otherwise drained silently)
 ```
@@ -29,9 +29,33 @@ In BXM itself, `npm test` does the same.
 
 `all` (default) runs build → background → view → boot.
 
+## NEVER mock — test against the real harness
+
+Every layer hands your test the **real** runtime, never a hand-rolled fake:
+
+- **No `mockManager`, no fake `chrome`/`browser` objects, no stubbed background/popup contexts.** `background`-layer tests run inside a real MV3 service worker with the real `chrome.*` API; `view`-layer tests run inside a real Chromium tab with the real DOM and real `chrome.runtime` messaging; `boot`-layer tests load the consumer's real packaged extension. Use what the harness gives you (`ctx`, `ctx.manager`, `ctx.page`, the `inspect` callback's `{ extension, page }`, and the browser globals `chrome` / `document` / `window`) — do not reconstruct any of it.
+- **Pure functions (zero I/O) are the only thing you call directly.** A regex map in `lib/*.js`, a string formatter, a config-shape validator — `require` it and assert on its output in a `build`-layer test. That is not mocking; it is calling a pure function. Anything that touches real I/O (storage, messaging, the SW lifecycle, the DOM, the network) runs against the real harness, not a substitute.
+
+### Real external APIs are GATED, NOT mocked
+
+Tests that hit a real external service (Firebase, push, any network call) live in **integration suites** and are gated behind `npx bxm test --integration`:
+
+- **Normal mode** (`npx bxm test`) **SKIPS** these calls **in-source** — guard them with `ctx.skip(reason)` (or an early return) so the test no-ops when `--integration` is absent. The external API is **skipped in-source, NOT mocked.** Never stand up a fake Firebase / fake fetch to make a normal-mode run go green.
+- **Integration mode** (`npx bxm test --integration`) runs the same code against the **real** service.
+- **Anything an integration test creates externally MUST be cleaned up by the test** — delete the doc/user/record it created (use the suite/group `cleanup: async (ctx) => { ... }` hook, which runs after the last test). Leave no residue in the real backend.
+
+### The ONLY two exceptions where a narrow stub is allowed
+
+Mock **nothing** by default. There are exactly two cases where the real dependency genuinely cannot run in the test environment — and even then, stub the *smallest possible seam* (one method / one module), restore it immediately, and comment *why*:
+
+1. **A side effect that would destroy the test run itself.** If invoking the real thing would kill or corrupt the harness — a process-exit, a destructive clean/wipe, or a *recursive re-invocation of a CLI command* (running the real `test`/`clean`/`setup` command from inside a test re-enters the runner) — you may stub *that one module/call* to a no-op, assert the dispatch logic, then restore. (Example: `cli.test.js` stubs the real command modules so testing CLI dispatch doesn't actually run them.)
+2. **A real dependency the test environment can't provide.** When the real object only exists from infra you can't stand up in a `build`-layer unit test, a unit test may hand a minimal stub to verify a narrow side effect — but a real-harness layer (`background`/`view`/`boot`) MUST still cover the wired path where one exists.
+
+If you can run it for real, you must. These exceptions are not a license to unit-test in isolation when a real-harness layer would work.
+
 ## `BXM_TEST_MODE=true` — the canonical "we're in tests" signal
 
-Both BXM test runners set `BXM_TEST_MODE=true` in spawned child envs. That powers `manager.isTesting()` (and `Manager.isTesting()` static) — the cross-context helper anything in BXM/consumer code should check when behavior needs to differ in tests. See [cross-context-helpers.md](cross-context-helpers.md).
+Both BXM test runners set `BXM_TEST_MODE=true` in spawned child envs. That powers `manager.isTesting()` (and `Manager.isTesting()` static) — the cross-context helper anything in BXM/consumer code should check when behavior needs to differ in tests. See [environment-detection.md](environment-detection.md).
 
 Consumers writing their own tests get this automatically when running through `npx bxm test`. To set it manually in another runner:
 
@@ -47,6 +71,29 @@ Consumers writing their own tests get this automatically when running through `n
 Directories starting with `_` are ignored. Files load alphabetically.
 
 **Framework's boot suites are scoped to BXM self-test runs only.** When a consumer runs `npx bxm test`, the framework's `dist/test/suites/boot/**` is excluded from discovery (those tests assert on BXM's internal fixture extension). Consumers write their own boot tests under `<cwd>/test/boot/`. See [test-boot-layer.md](test-boot-layer.md).
+
+## `test/_init.js` — pre-test lifecycle hook
+
+The runner loads an optional `test/_init.js` from **both** test roots — the framework (`<BXM>/test/_init.js`) and the consumer project (`<cwd>/test/_init.js`) — and runs it **once, before any suite** (it is NOT itself run as a test; the `_`-prefix keeps it out of discovery). Mirrors the same hook in BEM/EM/UJM so all four frameworks share one shape.
+
+The module **must export a function** — `module.exports = (ctx) => ({ ... })` — called with `{ projectRoot }` and returning the hook object. It may declare:
+
+- `async setup({ projectRoot })` — runs once before the suites, e.g. to scaffold a fixture file the boot layer needs.
+
+There is **no `cleanup` hook** and **no `accounts` field** (unlike BEM — these frameworks have no auth/user system): tests clean up after themselves, so there is nothing project-level to tear down.
+
+```javascript
+// <cwd>/test/_init.js
+const fs = require('fs');
+const path = require('path');
+
+module.exports = ({ projectRoot }) => ({
+  async setup() {
+    // Seed any fixture a suite needs before it runs.
+    fs.mkdirSync(path.join(projectRoot, '.temp'), { recursive: true });
+  },
+});
+```
 
 ## Test file shapes
 
@@ -258,11 +305,11 @@ You don't have to think about this — write tests in normal JS — but it's why
 
 ## Why a custom harness instead of Jest / Vitest?
 
-Browser-context code (background SW, popup DOM, content script) only runs inside Chromium. Jest's jsdom can't fake `chrome.runtime` faithfully; `webextension-polyfill` stubs the API but doesn't catch real SW lifecycle bugs. Puppeteer gives a real Chromium with real `chrome.*` APIs.
+Browser-context code (background SW, popup DOM, content script) only runs inside Chromium. This is exactly why BXM does not let you mock: a faked `chrome.runtime` (Jest's jsdom can't reproduce it faithfully) or a stubbed API (`webextension-polyfill` provides one, but it doesn't catch real SW lifecycle bugs) passes tests while shipping broken extensions. Puppeteer gives a real Chromium with real `chrome.*` APIs, so the harness is the real thing — not a substitute you assert against. See [NEVER mock](#never-mock--test-against-the-real-harness).
 
 Same trade-off EM ran into with Electron — tests must run inside the real runtime, so the framework owns the runner.
 
 ## See also
 
 - [test-boot-layer.md](test-boot-layer.md) — boot layer deep-dive (loads consumer's actual packaged extension)
-- [cross-context-helpers.md](cross-context-helpers.md) — `Manager.isTesting()` / `isDevelopment()` / etc.
+- [environment-detection.md](environment-detection.md) — `Manager.isTesting()` / `isDevelopment()` / etc.

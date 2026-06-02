@@ -61,7 +61,7 @@ If you DO need to add a new top-level component type:
      }
    }
    ```
-5. **Mix in cross-context helpers** at the bottom of the new Manager file — see [cross-context-helpers.md](cross-context-helpers.md).
+5. **Mix in cross-context helpers** at the bottom of the new Manager file — see [environment-detection.md](environment-detection.md).
 
 ## See also
 

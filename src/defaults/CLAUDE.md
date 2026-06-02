@@ -1,15 +1,25 @@
 # ========== Default Values ==========
 # Browser Extension Manager (BXM) — consumer project
 
-> **Auto-managed file.** Everything between `# ========== Default Values ==========` and `# ========== Custom Values ==========` is owned by `browser-extension-manager` and rewritten on every `npx mgr setup`. Put your own project-specific notes BELOW the `Custom Values` marker — that section is preserved verbatim across setups.
-
 ## Framework
 
 This project consumes **Browser Extension Manager** (BXM) — a comprehensive framework for building modern cross-browser extensions (Chrome, Firefox, Edge, Opera, Brave). BXM provides one-line bootstrap per extension context, a component-based architecture (view + styles + script per context), a multi-browser build/release pipeline that produces store-uploadable zips, cross-context auth synchronization, and a built-in four-layer test framework.
 
-**Framework's own docs** (read these for deep-dives; both paths point to the same files, the absolute path works regardless of working directory):
-- Top-level overview: `/Users/ian/Developer/Repositories/ITW-Creative-Works/browser-extension-manager/CLAUDE.md` (or `node_modules/browser-extension-manager/CLAUDE.md`)
-- Subsystem references: `/Users/ian/Developer/Repositories/ITW-Creative-Works/browser-extension-manager/docs/` (or `node_modules/browser-extension-manager/docs/`)
+## 🚨 READ THE FRAMEWORK DOCS FIRST
+
+**Before doing ANY work on this codebase, Claude MUST read the framework documentation — that is where the architecture, conventions, APIs, and gotchas live. Skipping these will result in solutions that conflict with framework patterns.**
+
+**Required reading:**
+- **`node_modules/browser-extension-manager/CLAUDE.md`** — top-level overview + index
+- **`node_modules/browser-extension-manager/docs/`** — subsystem deep references (read the relevant ones for the task at hand)
+
+## 🚨 READ WEB-MANAGER TOO
+
+**BXM ships `web-manager` as a runtime singleton across every extension context** (background service worker, popup, options, sidepanel, content scripts) — it powers auth, Firebase, reactive `data-wm-bind` directives, analytics, error tracking, and utilities (`escapeHTML`, etc.). Any task that touches auth flows, Firestore reads/writes, subscription resolution, push notifications, or DOM bindings means you are working with web-manager as much as with BXM.
+
+**Required reading:**
+- **`node_modules/web-manager/CLAUDE.md`** — top-level overview + index
+- **`node_modules/web-manager/docs/`** — module deep references (Auth, Bindings, Firestore, Notifications, etc.)
 
 ## Quick start
 
@@ -18,7 +28,11 @@ npm start                   # dev with live reload (gulp → webpack → serve)
 npm run build               # production build → dist/ + packaged/<browser>/raw/ + .zip per browser
 BXM_IS_PUBLISH=true npm run build   # build + auto-upload to Chrome / Firefox / Edge stores
 npx mgr test                # run framework + project test suites
+npx mgr install dev         # use LOCAL browser-extension-manager source (to test framework edits)
+npx mgr install live        # restore the published browser-extension-manager from npm
 ```
+
+> Editing the BXM framework source while working here? Run `npx mgr install dev` so this project picks up your uncommitted framework changes (it otherwise uses its installed `node_modules/browser-extension-manager`). Run `npx mgr install live` to switch back.
 
 Load the unpacked extension in Chrome: point chrome://extensions → "Load unpacked" at `packaged/chromium/raw/`.
 
@@ -57,9 +71,11 @@ After `initialize()`, every Manager exposes:
 - `manager.logger` — timestamped per-context logger
 - `manager.webManager` — Web Manager singleton (Firebase, auth, analytics, reactive `data-wm-bind` directives)
 - `manager.messenger` — `chrome.runtime.onMessage` listener wired automatically
-- `manager.isDevelopment()` / `isProduction()` / `isTesting()` / `getVersion()` — cross-context helpers
+- `manager.isDevelopment()` / `isProduction()` / `isTesting()` / `getVersion()` — cross-context helpers. `getEnvironment()` returns `'development' | 'testing' | 'production'` (mutually exclusive; testing wins). Gate side effects on the intentional check (`isProduction()` for prod-only; `isDevelopment() || isTesting()` for local-or-test) — never `!isDevelopment()`.
 
 Auth UI is declarative — add `.auth-signin-btn` / `.auth-signout-btn` / `.auth-account-btn` to buttons; BXM wires them. Show/hide based on auth state via `data-wm-bind="@show auth.user"`.
+
+<!-- Everything above this marker is owned by the framework and rewritten on every `npx mgr setup`. Add your project-specific notes below — they are preserved across setups. -->
 
 # ========== Custom Values ==========
 

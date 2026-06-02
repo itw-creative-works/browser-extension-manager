@@ -15,6 +15,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.5.0] - 2026-06-02
+
+### Added
+
+- **`test/_init.js` pre-test lifecycle hook.** The test runner loads an optional `test/_init.js` from BOTH test roots (framework + consumer project) and runs its `setup()` ONCE before any suite (it is not run as a test itself; the `_`-prefix keeps it out of discovery). The module **must export a function** — `module.exports = (ctx) => ({ setup })` — called with `{ projectRoot }`. There is no `cleanup` hook (tests clean up after themselves) and no `accounts` field (no auth/user system, unlike the backend framework). Mirrors the same hook across all four OMEGA frameworks. See [docs/test-framework.md](docs/test-framework.md).
+- **Consumer-shipped defaults via `src/defaults/`** — a boilerplate `test/_init.js`, `CHANGELOG.md`, and `docs/` scaffold now ship to consumers on first setup (copied if absent, never overwriting an existing file).
+
+### Changed
+
+- **Environment detection consolidated onto `getEnvironment()` as SSOT** ([src/utils/mode-helpers.js](src/utils/mode-helpers.js)). `getEnvironment()` is the single reader of the raw signals (folding in the packaged-build signal) and returns exactly one of `development | testing | production` (mutually exclusive, testing wins); `isDevelopment`/`isProduction`/`isTesting` now DERIVE from it so they can never disagree. No-signal default is `development` (a deployed extension always carries its baked-in build signal). `getEnvironment` moved OUT of `build.js` to live WITH the `is*()` family in mode-helpers, and is mixed into all context Managers via `attachTo(Manager)`.
+- **Install-command alias parity** ([src/commands/install.js](src/commands/install.js)) — accepts the unified set across all four frameworks (`dev|d|development|local|l` / `live|prod|p|production`); docs advertise the canonical `dev` + `live`.
+- **Docs reorg** — `docs/cross-context-helpers.md` renamed to `docs/environment-detection.md` with a mirrored 9-section structure shared across BEM/EM/UJM/BXM; CLAUDE.md / README / managers / components docs updated to match.
+
+---
 ## [1.4.0] - 2026-05-12
 
 ### Added

@@ -29,9 +29,10 @@ module.exports = {
   description: 'utils/mode-helpers — cross-context isDevelopment/isTesting/getVersion',
   tests: [
     {
-      name: 'exports { attachTo, isDevelopment, isProduction, isTesting, getVersion }',
+      name: 'exports { attachTo, getEnvironment, isDevelopment, isProduction, isTesting, getVersion }',
       run: (ctx) => {
         ctx.expect(typeof helpers.attachTo).toBe('function');
+        ctx.expect(typeof helpers.getEnvironment).toBe('function');
         ctx.expect(typeof helpers.isDevelopment).toBe('function');
         ctx.expect(typeof helpers.isProduction).toBe('function');
         ctx.expect(typeof helpers.isTesting).toBe('function');
@@ -50,18 +51,29 @@ module.exports = {
       },
     },
     {
-      name: 'isDevelopment() is true under NODE_ENV=development',
+      name: 'isDevelopment() is true under NODE_ENV=development (and not testing)',
       run: (ctx) => {
-        withEnv({ NODE_ENV: 'development', BXM_BUILD_MODE: null }, () => {
+        withEnv({ NODE_ENV: 'development', BXM_BUILD_MODE: null, BXM_TEST_MODE: null }, () => {
           ctx.expect(helpers.isDevelopment()).toBe(true);
         });
       },
     },
     {
-      name: 'isDevelopment() is false when BXM_BUILD_MODE=true',
+      name: 'isDevelopment() is false / isProduction() true when BXM_BUILD_MODE=true (and not testing)',
       run: (ctx) => {
-        withEnv({ NODE_ENV: null, BXM_BUILD_MODE: 'true' }, () => {
+        withEnv({ NODE_ENV: null, BXM_BUILD_MODE: 'true', BXM_TEST_MODE: null }, () => {
           ctx.expect(helpers.isDevelopment()).toBe(false);
+          ctx.expect(helpers.isProduction()).toBe(true);
+        });
+      },
+    },
+    {
+      name: 'testing takes precedence — is* are mutually exclusive (exactly one true)',
+      run: (ctx) => {
+        withEnv({ BXM_TEST_MODE: 'true', BXM_BUILD_MODE: 'true' }, () => {
+          ctx.expect(helpers.isTesting()).toBe(true);
+          ctx.expect(helpers.isDevelopment()).toBe(false);
+          ctx.expect(helpers.isProduction()).toBe(false);
         });
       },
     },
@@ -70,11 +82,38 @@ module.exports = {
       run: (ctx) => {
         function FakeManager() {}
         helpers.attachTo(FakeManager);
+        ctx.expect(typeof FakeManager.getEnvironment).toBe('function');
+        ctx.expect(typeof FakeManager.prototype.getEnvironment).toBe('function');
         ctx.expect(typeof FakeManager.isDevelopment).toBe('function');
         ctx.expect(typeof FakeManager.prototype.isDevelopment).toBe('function');
         ctx.expect(typeof FakeManager.isTesting).toBe('function');
         ctx.expect(typeof FakeManager.prototype.isTesting).toBe('function');
         ctx.expect(typeof FakeManager.getVersion).toBe('function');
+      },
+    },
+    {
+      // The core invariant of the SSOT refactor: is*() DERIVE from getEnvironment(), so they
+      // can NEVER disagree with it, and exactly one is always true. (In build-time Node `chrome`
+      // is undefined, so getEnvironment() resolves via the env-var fallback.)
+      name: 'invariant: is*() exactly matches getEnvironment() + mutually exclusive (every scenario)',
+      run: (ctx) => {
+        const scenarios = [
+          { env: { BXM_TEST_MODE: 'true', BXM_BUILD_MODE: 'true', NODE_ENV: null }, expect: 'testing' },
+          { env: { BXM_TEST_MODE: null, BXM_BUILD_MODE: 'true', NODE_ENV: null },    expect: 'production' },
+          { env: { BXM_TEST_MODE: null, BXM_BUILD_MODE: null, NODE_ENV: 'development' }, expect: 'development' },
+          { env: { BXM_TEST_MODE: null, BXM_BUILD_MODE: null, NODE_ENV: null },       expect: 'development' }, // BXM defaults dev (unpacked)
+        ];
+        for (const s of scenarios) {
+          withEnv(s.env, () => {
+            const e = helpers.getEnvironment();
+            ctx.expect(e).toBe(s.expect);
+            ctx.expect(helpers.isDevelopment()).toBe(e === 'development');
+            ctx.expect(helpers.isTesting()).toBe(e === 'testing');
+            ctx.expect(helpers.isProduction()).toBe(e === 'production');
+            const trueCount = [helpers.isDevelopment(), helpers.isTesting(), helpers.isProduction()].filter(Boolean).length;
+            ctx.expect(trueCount).toBe(1);
+          });
+        }
       },
     },
     {

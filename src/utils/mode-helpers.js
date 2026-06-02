@@ -1,54 +1,75 @@
-// Runtime mode helpers (BEM/EM-pattern), shared across BXM's eight context Managers
+// Runtime mode helpers (BEM/EM/UJM-pattern), shared across BXM's eight context Managers
 // (build / background / popup / options / content / sidepanel / page / offscreen).
 //
-// Three orthogonal concepts:
-//   isDevelopment() — true when running unpacked from disk (an unpacked extension
-//                     loaded via chrome://extensions or a dev build of the framework).
-//                     Browser detection uses `chrome.runtime.getManifest().update_url`
-//                     — packed extensions from the Web Store have one, unpacked ones
-//                     do not. Falls back to NODE_ENV in Node contexts.
-//   isProduction()  — inverse. Running from a packed .crx / store-installed extension.
-//   isTesting()     — true when BXM's test framework is running this process. Set by
-//                     BXM's test runners (BXM_TEST_MODE=true) and consumer test setups
-//                     that want the same signal.
+// `getEnvironment()` is the SINGLE SOURCE OF TRUTH: it is the ONLY function that reads the
+// raw signals (BXM_TEST_MODE / manifest.update_url / BXM_BUILD_MODE / NODE_ENV /
+// config.bxm.environment) and resolves them to exactly ONE of three mutually-exclusive
+// values. The three is*() checks DERIVE from it — they never read raw signals themselves,
+// so they can never disagree with getEnvironment().
 //
-// Use these whenever behavior should differ by *what kind of process* you're in —
-// shorter timeouts in tests, DevTools menu items only in dev, prompts suppressed in
-// tests. Don't use them for "should we hit dev or prod backends" — that's a config
-// concern; use `getEnvironment()` for that (in build.js).
+//   isDevelopment() — `getEnvironment() === 'development'`: running unpacked from disk (an
+//                     unpacked extension via chrome://extensions or a dev build), and NOT
+//                     testing.
+//   isTesting()     — `getEnvironment() === 'testing'`: BXM's test framework is running this
+//                     process (BXM_TEST_MODE=true). TAKES PRECEDENCE — a test run is not dev.
+//   isProduction()  — `getEnvironment() === 'production'`: running from a packed .crx /
+//                     store-installed extension, and NOT testing. A real positive check —
+//                     NOT `!isDevelopment()`.
 //
-// Context caveat: in build-time Node (gulp / CLI), `chrome` is undefined. We detect
-// via `typeof chrome` so the same code works in every context. In test mode the
-// browser-side check is short-circuited via BXM_TEST_MODE so `isDevelopment()`
-// returns a stable value regardless of which test layer is running.
+// To gate "anything non-production" use `!isProduction()` or `isDevelopment() ||
+// isTesting()` intentionally — never assume two values.
+//
+// Context caveat: in build-time Node (gulp / CLI), `chrome` is undefined. getEnvironment()
+// detects via `typeof chrome` so the same code works in every context. Browser detection
+// uses `chrome.runtime.getManifest().update_url` — packed store extensions have one,
+// unpacked ones do not.
 
-function isDevelopment() {
-  // Browser-side: rely on `update_url` being absent for unpacked extensions.
-  // (Store-installed extensions have `update_url` set to clients2.google.com / similar.)
+// getEnvironment() — the SINGLE SOURCE OF TRUTH. Reads every raw signal and resolves to
+// exactly ONE of 'development' | 'testing' | 'production' (mutually exclusive; testing wins).
+// Precedence: testing → production → development.
+function getEnvironment() {
+  // 1. Testing wins — set by BXM's test runners / harness, or a testing-baked build.
+  //    Works in Node (process.env), extension contexts (globalThis set before consumer JS),
+  //    and config-baked builds (config.bxm.environment === 'testing').
+  if (typeof process !== 'undefined' && process.env && process.env.BXM_TEST_MODE === 'true') return 'testing';
+  if (typeof globalThis !== 'undefined' && globalThis.BXM_TEST_MODE === true) return 'testing';
+  if (this && this.config && this.config.bxm && this.config.bxm.environment === 'testing') return 'testing';
+
+  // 2. Browser-side: packed/store extensions have `update_url`; unpacked ones do not.
+  //    This is the authoritative runtime signal in an extension context.
   if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getManifest === 'function') {
     try {
-      const manifest = chrome.runtime.getManifest();
-      return !manifest.update_url;
-    } catch (_) { /* fall through */ }
+      return chrome.runtime.getManifest().update_url ? 'production' : 'development';
+    } catch (_) { /* fall through to Node/config signals */ }
   }
-  // Node / build-time fallback.
-  if (process.env.NODE_ENV === 'development') return true;
-  if (process.env.BXM_BUILD_MODE === 'true') return false;
-  if (this && this.config && this.config.bxm && this.config.bxm.environment === 'development') return true;
-  return false;
+
+  // 3. Node / build-time + config signals.
+  if (process.env.BXM_BUILD_MODE === 'true') return 'production';
+  if (process.env.NODE_ENV === 'development') return 'development';
+  if (this && this.config && this.config.bxm && this.config.bxm.environment === 'development') return 'development';
+  if (this && this.config && this.config.bxm && this.config.bxm.environment === 'production') return 'production';
+
+  // 4. Default: development. BXM's deployed artifacts ALWAYS carry their signal — a packed /
+  //    store extension has `manifest.update_url`, and build-time Node sets BXM_BUILD_MODE. So
+  //    reaching here means a bare tooling / unpacked context, where development is the sensible
+  //    answer. (Contrast BEM/EM, whose deployed RUNTIME can legitimately lack a signal, so they
+  //    default to production.)
+  return 'development';
+}
+
+// The three checks DERIVE from getEnvironment() — they never read raw signals, so they can
+// never disagree with it. isDevelopment() is NOT true in testing; isProduction() is a real
+// positive check (never `!isDevelopment()`).
+function isDevelopment() {
+  return getEnvironment.call(this) === 'development';
 }
 
 function isProduction() {
-  return !this.isDevelopment();
+  return getEnvironment.call(this) === 'production';
 }
 
 function isTesting() {
-  // Canonical signal — set by BXM's test runners and consumer test setups alike.
-  // Works in Node (process.env) AND in extension contexts (the harness extension
-  // sets globalThis.BXM_TEST_MODE before any consumer code runs).
-  if (typeof process !== 'undefined' && process.env && process.env.BXM_TEST_MODE === 'true') return true;
-  if (typeof globalThis !== 'undefined' && globalThis.BXM_TEST_MODE === true) return true;
-  return false;
+  return getEnvironment.call(this) === 'testing';
 }
 
 // `getVersion()` — returns the extension's version string.
@@ -71,20 +92,24 @@ function getVersion() {
 }
 
 // Mix the helpers into a Manager constructor's prototype + the constructor itself
-// (so `Manager.isTesting()` works statically too, matching BEM/EM pattern).
+// (so `Manager.isTesting()` works statically too, matching BEM/EM/UJM pattern).
+// getEnvironment() is the SSOT and is attached here too — build.js no longer defines it.
 function attachTo(Manager) {
-  Manager.prototype.isDevelopment = isDevelopment;
-  Manager.prototype.isProduction  = isProduction;
-  Manager.prototype.isTesting     = isTesting;
-  Manager.prototype.getVersion    = getVersion;
-  Manager.isDevelopment = isDevelopment;
-  Manager.isProduction  = isProduction;
-  Manager.isTesting     = isTesting;
-  Manager.getVersion    = getVersion;
+  Manager.prototype.getEnvironment = getEnvironment;
+  Manager.prototype.isDevelopment  = isDevelopment;
+  Manager.prototype.isProduction   = isProduction;
+  Manager.prototype.isTesting      = isTesting;
+  Manager.prototype.getVersion     = getVersion;
+  Manager.getEnvironment = getEnvironment;
+  Manager.isDevelopment  = isDevelopment;
+  Manager.isProduction   = isProduction;
+  Manager.isTesting      = isTesting;
+  Manager.getVersion     = getVersion;
 }
 
 module.exports = {
   attachTo,
+  getEnvironment,
   isDevelopment,
   isProduction,
   isTesting,

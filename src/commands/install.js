@@ -17,7 +17,7 @@ module.exports = async function (options) {
 
   try {
     // Install production
-    if (['prod', 'p', 'production'].includes(type)) {
+    if (['live', 'prod', 'p', 'production'].includes(type)) {
       // Log
       logger.log('Installing production...');
 

@@ -6,6 +6,19 @@
 
 Browser Extension Manager (BXM) is a comprehensive framework for building modern cross-browser extensions (Chrome, Firefox, Edge, Opera, Brave). Sister project to Electron Manager (EM) and Ultimate Jekyll Manager (UJM). Provides one-line-import bootstrap per extension context, a component-based architecture, a multi-browser build/release pipeline, auto-translation across 16 languages, cross-context auth synchronization, and a built-in four-layer test framework.
 
+## Recommended skills
+
+- **`BXM:patterns`** — SSOT for Browser Extension Manager component architecture, build system, and development patterns. Auto-loads on BXM-specific keywords (`manifest.json`, `extension popup`, `extension background`, `offscreen document`, `chrome extension`, etc.) and when touching files in `src/assets/js/components/`, `src/views/`, `src/assets/css/components/`, `config/browser-extension-manager.json`.
+- **`js:patterns`** — JavaScript/Node.js conventions: file structure, JSDoc, defensive coding (`?.` usage), template literals, `package.json` conventions. Auto-loads when creating new `.js` files or touching JS module structure.
+
+## 🚨 READ WEB-MANAGER TOO
+
+**BXM ships `web-manager` as a runtime singleton across every extension context** (background service worker, popup, options, sidepanel, content scripts) — it powers auth, Firebase, reactive `data-wm-bind` directives, analytics, error tracking, and utilities (`escapeHTML`, etc.). Any task that touches auth flows, Firestore reads/writes, subscription resolution, push notifications, or DOM bindings means you are working with web-manager as much as with BXM.
+
+**Required reading:**
+- **`node_modules/web-manager/CLAUDE.md`** — top-level overview + index
+- **`node_modules/web-manager/docs/`** — module deep references (Auth, Bindings, Firestore, Notifications, etc.)
+
 ## Quick Start
 
 ### For Consuming Projects
@@ -23,7 +36,7 @@ To load the unpacked extension in Chrome: point chrome://extensions → "Load un
 
 1. `npm install`
 2. `npm start` — watch + compile `src/` → `dist/` via prepare-package
-3. Test in a consumer project: `npm i ../browser-extension-manager` (file: link)
+3. Test in a consumer project: from inside the consumer, run `npx mgr install dev` to swap BXM to this local repo — required whenever you edit the framework source and want the consumer to pick up the changes (the consumer otherwise keeps its installed `node_modules/browser-extension-manager`). Reverse with `npx mgr install live`.
 4. `npm test` — runs the framework's own suites
 
 ## Architecture
@@ -49,7 +62,7 @@ After `initialize()`, the Manager exposes:
 - `manager.logger` — timestamped per-context logger
 - `manager.webManager` — Web Manager singleton (Firebase, auth, analytics, reactive bindings)
 - `manager.messenger` — `chrome.runtime.onMessage` listener wired automatically
-- `manager.isDevelopment() / isProduction() / isTesting() / getVersion()` — cross-context helpers ([docs/cross-context-helpers.md](docs/cross-context-helpers.md))
+- `manager.isDevelopment() / isProduction() / isTesting() / getVersion()` — cross-context helpers ([docs/environment-detection.md](docs/environment-detection.md))
 
 ### Component architecture
 
@@ -123,12 +136,13 @@ Both receive an `index` build-info object (package, manifest, config, paths, env
 
 Every Manager (build + 7 runtime contexts) has the same set of static + instance helpers via `attachTo(Manager)` mixin from `src/utils/mode-helpers.js`:
 
-- `Manager.isDevelopment()` — running unpacked
-- `Manager.isProduction()` — running packed (from store)
-- `Manager.isTesting()` — `BXM_TEST_MODE=true`
+- `Manager.isDevelopment()` — running unpacked, and NOT testing
+- `Manager.isTesting()` — `BXM_TEST_MODE=true` (takes precedence over development)
+- `Manager.isProduction()` — running packed (from store), and NOT testing. A real positive check, NOT `!isDevelopment()`
+- `Manager.getEnvironment()` — `'development' | 'testing' | 'production'` (mutually exclusive; testing wins)
 - `Manager.getVersion()` — extension version (`chrome.runtime.getManifest().version` in browser, `package.json#version` in Node)
 
-Use these instead of grepping `process.env` ad-hoc. See [docs/cross-context-helpers.md](docs/cross-context-helpers.md).
+The three environment checks are mutually exclusive. Gate side effects on the INTENTIONAL check (`isProduction()` for prod-only, `isDevelopment() || isTesting()` for local-or-test) — never `!isDevelopment()`. Use these instead of grepping `process.env` ad-hoc. See [docs/environment-detection.md](docs/environment-detection.md).
 
 ### Test framework
 
@@ -143,6 +157,8 @@ Four layers:
 - **boot** — real headless Chromium loading the **consumer's** `packaged/<browser>/raw/` as an unpacked extension. End-to-end: does the real packaged extension boot?
 
 Test files export `{ type, layer, description, tests, cleanup }` with `run` (build/background/view) or `inspect` (boot). Same `ctx.expect` / `state` / `skip` API as EM and BEM. CSP-safe ([docs/test-framework.md](docs/test-framework.md)) — test bodies are inlined as literal async-function expressions at runner build-time, not eval'd inside the SW.
+
+**NEVER mock — test against the real harness.** Every layer gives you the real runtime (real MV3 SW, real Chromium tab + DOM, real packaged extension), so never hand-roll a `mockManager`, fake `chrome`/`browser`, or stubbed context. Only pure functions (zero I/O) are called directly. Real external APIs (Firebase, etc.) are GATED behind `npx bxm test --integration` — normal mode skips them in-source via `ctx.skip`, NOT mocked; integration-mode tests must clean up anything they create externally. See [docs/test-framework.md](docs/test-framework.md).
 
 See [docs/test-framework.md](docs/test-framework.md) and [docs/test-boot-layer.md](docs/test-boot-layer.md).
 
@@ -172,6 +188,17 @@ See [docs/cli.md](docs/cli.md).
 - **Browser-context modules are ES-module.** Webpack compiles them. Don't try to `require()` them from Node — they reference `window`, `document`, `chrome` at module-load time. Build-layer tests should target `lib/*.js` (Node-safe) or use BXM's public Manager API (`require('browser-extension-manager/build').getConfig()`).
 - **Consumer pattern: use the public Manager API in tests.** Don't `require('json5')` or other transitive BXM deps directly from consumer test files — they're not in the consumer's `package.json` and resolution is fragile. Use `Manager.getConfig()` / `Manager.getManifest()` / `Manager.require('json5')`.
 
+## Doc-update parity
+
+Whenever you make a behavioral change (new command, new flag, new pattern, removed feature), update:
+
+1. **`README.md`** — user-facing summary
+2. **`CLAUDE.md`** (this file) — architecture overview, one paragraph or cross-link
+3. **`docs/<topic>.md`** — the meat. If a topic doesn't have a doc yet, create one.
+4. **`CHANGELOG.md`** — if the project keeps one
+
+Don't ship behavioral changes with stale docs. Validate first, then document — write docs that describe shipped reality, not intentions.
+
 ## Documentation
 
 API references for each subsystem live in `docs/`:
@@ -179,7 +206,7 @@ API references for each subsystem live in `docs/`:
 ### Architecture
 - [docs/components.md](docs/components.md) — seven component contexts, three-part structure (view + styles + script)
 - [docs/managers.md](docs/managers.md) — one-line bootstrap per context, import paths, `initialize()` flow
-- [docs/cross-context-helpers.md](docs/cross-context-helpers.md) — `Manager.isTesting / isDevelopment / isProduction / getVersion`
+- [docs/environment-detection.md](docs/environment-detection.md) — `Manager.isTesting / isDevelopment / isProduction / getVersion`
 
 ### Runtime
 - [docs/extension.md](docs/extension.md) — cross-browser `chrome.*` / `browser.*` API wrapper

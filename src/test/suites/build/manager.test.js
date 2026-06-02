@@ -111,29 +111,51 @@ module.exports = {
       },
     },
     {
-      name: 'getEnvironment returns "development" when BXM_BUILD_MODE !== "true"',
+      name: 'getEnvironment returns "testing" when BXM_TEST_MODE === "true" (takes precedence)',
       run: (ctx) => {
         const Manager = require(path.join(__dirname, '..', '..', '..', 'build.js'));
-        const original = process.env.BXM_BUILD_MODE;
-        delete process.env.BXM_BUILD_MODE;
+        const origTest = process.env.BXM_TEST_MODE;
+        const origBuild = process.env.BXM_BUILD_MODE;
+        process.env.BXM_TEST_MODE = 'true';
+        process.env.BXM_BUILD_MODE = 'true'; // even with build mode set, testing wins
         try {
-          ctx.expect(Manager.getEnvironment()).toBe('development');
+          ctx.expect(Manager.getEnvironment()).toBe('testing');
         } finally {
-          if (original !== undefined) process.env.BXM_BUILD_MODE = original;
+          if (origTest === undefined) delete process.env.BXM_TEST_MODE; else process.env.BXM_TEST_MODE = origTest;
+          if (origBuild === undefined) delete process.env.BXM_BUILD_MODE; else process.env.BXM_BUILD_MODE = origBuild;
         }
       },
     },
     {
-      name: 'getEnvironment returns "production" when BXM_BUILD_MODE === "true"',
+      name: 'getEnvironment returns "development" when BXM_BUILD_MODE !== "true" (and not testing)',
       run: (ctx) => {
         const Manager = require(path.join(__dirname, '..', '..', '..', 'build.js'));
         const original = process.env.BXM_BUILD_MODE;
+        const origTest = process.env.BXM_TEST_MODE;
+        delete process.env.BXM_BUILD_MODE;
+        delete process.env.BXM_TEST_MODE;
+        try {
+          ctx.expect(Manager.getEnvironment()).toBe('development');
+        } finally {
+          if (original !== undefined) process.env.BXM_BUILD_MODE = original;
+          if (origTest !== undefined) process.env.BXM_TEST_MODE = origTest;
+        }
+      },
+    },
+    {
+      name: 'getEnvironment returns "production" when BXM_BUILD_MODE === "true" (and not testing)',
+      run: (ctx) => {
+        const Manager = require(path.join(__dirname, '..', '..', '..', 'build.js'));
+        const original = process.env.BXM_BUILD_MODE;
+        const origTest = process.env.BXM_TEST_MODE;
+        delete process.env.BXM_TEST_MODE;
         process.env.BXM_BUILD_MODE = 'true';
         try {
           ctx.expect(Manager.getEnvironment()).toBe('production');
         } finally {
           if (original === undefined) delete process.env.BXM_BUILD_MODE;
           else                        process.env.BXM_BUILD_MODE = original;
+          if (origTest !== undefined) process.env.BXM_TEST_MODE = origTest;
         }
       },
     },
