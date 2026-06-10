@@ -29,6 +29,10 @@ Browser Extension Manager (BXM) is a comprehensive framework for building modern
 4. `npm run build` — production build (compiles `dist/`, packages per-browser into `packaged/<browser>/raw/` + `.zip`)
 5. `BXM_IS_PUBLISH=true npm run build` — also uploads to Chrome / Firefox / Edge stores (see [docs/publishing.md](docs/publishing.md))
 6. `npx bxm test` — runs framework + project test suites
+   - `npx mgr test build/config` — run a specific test by path (relative to `test/`)
+   - `npx mgr test bxm:build/config` — run only framework tests matching a path
+   - `npx mgr test project:custom-test` — run only consumer project tests matching a path
+   - Prefix with `TEST_EXTENDED_MODE=true` for tests that hit real external APIs
 
 To load the unpacked extension in Chrome: point chrome://extensions → "Load unpacked" at `packaged/chromium/raw/`.
 
@@ -175,6 +179,18 @@ See [docs/test-framework.md](docs/test-framework.md) and [docs/test-boot-layer.m
 | `test` | run framework + project test suites |
 
 See [docs/cli.md](docs/cli.md).
+
+## Dependency Resolution
+
+- **Consumer code can `require()` any BXM dependency** — webpack's `resolve.modules` includes the framework's own `node_modules/`. Consumer projects do NOT need to `npm install firebase`, `web-manager`, or any other BXM transitive dep. If a dep doesn't resolve, the fix is in BXM's webpack config — not the consumer's `package.json`.
+- **web-manager owns Firebase.** Consumer code NEVER imports Firebase directly (`require('firebase')` / `import('firebase/app')`). Use `import webManager from 'web-manager'` → `webManager.auth()`, `webManager.firestore()`. Same rule in EM and UJM.
+- **`Manager.require(name)`** resolves from BXM's module context at runtime (static + prototype). Use in gulp tasks or unbundled code (e.g. test fixtures). Webpack `resolve.modules` handles the bundled case.
+
+## Development Workflow
+
+- **🚫 NEVER run `npm start` / `npm run build` / `npm test`** unless the user explicitly asks. Assume the user is already running the dev server or build watcher. Running these commands kills the user's process and wastes time. Instead, **check output logs** after editing files to confirm changes compiled and took effect.
+- **After editing files**, verify the gulp watcher recompiled successfully. Check for webpack/sass errors in the console output. A change that breaks the build is not a completed change.
+- **Live-test UI changes via CDP.** After code changes compile, use the `chrome-devtools` MCP tools (screenshots, click, evaluate JS, console logs) to verify the change works in the running browser. This is the primary way to confirm UI changes — type-checking and test suites verify code correctness, not feature correctness. See `~/.claude/mcp-server/servers/chrome-devtools/CLAUDE.md`.
 
 ## File Conventions
 
