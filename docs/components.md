@@ -26,6 +26,20 @@ For a component named `<component>`:
 
 The build pipeline wires these together — `views/<component>/index.html` automatically references its matching `.bundle.css` and `.bundle.js`.
 
+## Manifest wiring per component
+
+`src/manifest.json` (JSON5, merged with BXM's default manifest at build — see [build-system.md](build-system.md)) registers each component with the browser:
+
+| Component | Manifest field |
+|---|---|
+| `popup` | `action.default_popup: 'views/popup/index.html'` |
+| `options` | `options_ui.page: 'views/options/index.html'` |
+| `sidepanel` | `side_panel.default_path: 'views/sidepanel/index.html'` |
+| `background` | `background.service_worker: 'assets/js/components/background.bundle.js'` |
+| `content` | `content_scripts` (match patterns + the content bundle) |
+| `offscreen` | created programmatically — requires the `offscreen` permission (see [offscreen.md](offscreen.md)) |
+| `pages` | none — opened via `extension.tabs.create({ url: extension.runtime.getURL('views/pages/index.html') })` |
+
 ## Manager-per-context
 
 Each component context gets its own Manager class with a one-line bootstrap. See [managers.md](managers.md) for the full list and import paths.
@@ -69,3 +83,5 @@ If you DO need to add a new top-level component type:
 - [build-system.md](build-system.md) — how components compile through webpack/sass/html
 - [defaults.md](defaults.md) — the `src/defaults/` template system
 - [css.md](css.md) — SCSS load paths for component styles
+- [offscreen.md](offscreen.md) — offscreen document lifecycle + messaging patterns
+- [xss-prevention.md](xss-prevention.md) — escaping/sanitizing the strings components render

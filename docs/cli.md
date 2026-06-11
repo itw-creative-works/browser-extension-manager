@@ -9,7 +9,7 @@
 | `setup` | `-s`, `--setup` | Scaffold a consumer project (copy `src/defaults/`, install peer deps, write projectScripts). Default when no command given. |
 | `clean` | `-c`, `--clean` | Remove `dist/`, `packaged/`, `.cache/`, `.temp/` |
 | `install` | `-i`, `i`, `--install` | Install peer deps (gulp, etc.) |
-| `test` | `-t`, `--test` | Run framework + project test suites. See [test-framework.md](test-framework.md). |
+| `test` | `-t`, `--test` | Run framework + project test suites. Positional target scopes by source + path (`project:` / `mgr:` / bare path); `--filter` matches test names; `--extended` enables real-external-API tests. See [test-framework.md](test-framework.md). |
 | `version` | `-v`, `--version` | Print BXM, Node, peer-dep versions |
 
 ## Entry point
@@ -40,6 +40,7 @@ Yargs parses `--foo bar` and `--foo=bar` into `options.foo`. Positional args go 
 // src/commands/test.js
 module.exports = async function (options) {
   const layer    = options.layer    || 'all';
+  const target   = (options._ && options._[1]) || null; // positional: `npx bxm test <target>`
   const filter   = options.filter   || null;
   const reporter = options.reporter || 'pretty';
   // ...
@@ -48,13 +49,15 @@ module.exports = async function (options) {
 
 ## Env var conventions
 
-Commands read BXM-prefixed env vars for behavior switches:
+Commands read BXM-prefixed env vars for behavior switches (one exception: `TEST_EXTENDED_MODE` is deliberately unprefixed — the SAME name across BEM/BXM/UJM/EM):
 
 | Env | Used by | Purpose |
 |---|---|---|
 | `BXM_BUILD_MODE=true` | gulp tasks | Production build mode |
 | `BXM_IS_PUBLISH=true` | gulp/package | Also publish to extension stores after packaging |
+| `BXM_LOG_FILE` | gulp + test runners | Override the stdout/stderr tee path, or `false` to disable (see [logging.md](logging.md)) |
 | `BXM_TEST_MODE=true` | test runners | Powers `Manager.isTesting()` (auto-set by `npx bxm test`) |
+| `TEST_EXTENDED_MODE=true` | test runners | Run tests that hit REAL external services (`--extended` is the CLI shorthand; see [test-framework.md](test-framework.md)) |
 | `BXM_TEST_BOOT_PROJECT` | test/boot | Override project root for boot tests |
 | `BXM_TEST_BOOT_DIR` | test/boot | Override extension dir directly |
 | `BXM_TEST_DEBUG=1` | test runners | Pipe Chromium stderr to console |

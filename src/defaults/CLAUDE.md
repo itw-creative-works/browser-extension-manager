@@ -28,9 +28,13 @@ npm start                   # dev with live reload (gulp → webpack → serve)
 npm run build               # production build → dist/ + packaged/<browser>/raw/ + .zip per browser
 BXM_IS_PUBLISH=true npm run build   # build + auto-upload to Chrome / Firefox / Edge stores
 npx mgr test                # run framework + project test suites
-npx mgr test build/config         # run a specific test by path (relative to test/)
+npx mgr test build/config         # bare path: run tests matching a path in BOTH sources
+npx mgr test project:             # run ONLY your project tests (project:<path> to narrow)
+npx mgr test mgr:                 # run ONLY framework tests (bxm: / framework: are equivalent aliases)
 npx mgr test bxm:build/config     # run only framework tests matching a path
-npx mgr test project:custom-test  # run only consumer project tests matching a path
+# Positional target selects which test FILES run; --filter=<substring> matches test NAMES within them
+npx mgr test --extended           # also run tests that hit REAL external services (off by default; TEST_EXTENDED_MODE=true is the env equivalent — shared name across BEM/BXM/UJM/EM)
+# (output is teed to logs/ — dev.log on `npm start`, build.log on `npm run build`, test.log on `npx mgr test`; cat instead of scrolling scrollback)
 npx mgr install dev         # use LOCAL browser-extension-manager source (to test framework edits)
 npx mgr install live        # restore the published browser-extension-manager from npm
 ```
@@ -83,6 +87,10 @@ Auth UI is declarative — add `.auth-signin-btn` / `.auth-signout-btn` / `.auth
 - **Do NOT install framework dependencies directly** (`firebase`, `web-manager`, etc.). BXM's webpack config resolves them through the framework's own `node_modules/`. If something doesn't resolve, the issue is in BXM's webpack config — not your `package.json`.
 - **web-manager owns Firebase.** Never `import firebase from 'firebase/app'`. Use `import webManager from 'web-manager'` → `webManager.auth()`, `webManager.firestore()`.
 - **`Manager.require(name)`** resolves from BXM's module context at runtime for unbundled code (gulp tasks, test fixtures).
+
+## Testing
+
+Every feature ships with tests at every layer it has a surface in: **logic** (`test/build/`, `test/background/`), **UI** (`test/view/` — real events on the real DOM), and **end-to-end** (`test/boot/`). Skip a layer only when the feature genuinely has no surface there — "the logic test covers it" does not excuse the UI test. See `test/README.md` and `node_modules/browser-extension-manager/docs/test-framework.md`.
 
 <!-- Everything above this marker is owned by the framework and rewritten on every `npx mgr setup`. Add your project-specific notes below — they are preserved across setups. -->
 

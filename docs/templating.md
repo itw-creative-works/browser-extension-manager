@@ -1,4 +1,4 @@
-# HTML Templating
+# Templating
 
 HTML views go through a two-step `{{ }}` token replacement during the `gulp/html` task. Same convention as EM and UJM.
 

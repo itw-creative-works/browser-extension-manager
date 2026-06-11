@@ -15,6 +15,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.6.0] - 2026-06-11
+
+### Changed
+
+- **Router skill renamed `BXM:patterns` → `omega:bxm`** — all framework skills now live under the `omega:` namespace (`omega:em`/`omega:bxm`/`omega:ujm`/`omega:bem` + the `omega:main` hub). CLAUDE.md's Recommended skills section updated.
+- Bumped `@babel/core` from ^7.29.0 to ^7.29.7
+- Bumped `@babel/preset-env` from ^7.29.5 to ^7.29.7
+- Bumped `sass` from ^1.99.0 to ^1.100.0
+- Bumped `web-manager` from ^4.1.42 to ^4.2.0
+- Bumped `webpack` from ^5.106.2 to ^5.107.2
+- Bumped `ws` from ^8.20.0 to ^8.21.0
+
+### Added
+
+- **`docs/publishing.md` — store listing description section (action-skill consolidation).** The standalone `BXM:write-description` skill was deleted and folded into `omega:bxm` as a process checklist; the Chrome Web Store description format (full template incl. the fixed Bonus/Privacy sections, copywriting rules, translation-cache invalidation steps) now lives in `docs/publishing.md` since it documents `config/description.md`.
+- **Dev-process guidance relaxed: only `npm start` is off-limits.** The "NEVER run" rule in CLAUDE.md now prohibits only the long-running dev watcher (instruct the user to start it if it isn't running; read `logs/*.log`, never tail the process) — `npx mgr test` and `npm run build` are fine to run.
+- **Designated test consumer documented** — `../powertools-browser-extension` is BXM's consumer project for validating framework changes end-to-end (builds, tests, packaging, runtime — any consumer-level flow may be exercised there freely); CLAUDE.md's framework-development workflow now names it alongside the `npx mgr install dev` / `live` swap.
+- **`docs/xss-prevention.md` + `docs/offscreen.md`**: migrated from the `omega:bxm` skill into the repo — `xss-prevention.md` (mirrors UJM's filename) carries the canonical inline `escapeHTML`/`sanitizeURL` forms, the never-write-your-own-helper rule, extension-specific attack vectors (tab.title/url/favIconUrl, content-script DOM), the sanitize matrix, and the do-NOT-escape list; `offscreen.md` carries the offscreen-document lifecycle (single-instance `getContexts` check, `createDocument` from background, two-way messaging). `components.md` gained a "Manifest wiring per component" section (action.default_popup / options_ui.page / side_panel.default_path / background.service_worker / offscreen permission). All indexed in CLAUDE.md. Part of the skills-as-routers refactor: framework facts live in repo docs (version-matched via `node_modules`); the skill now only routes + carries Claude-workflow rules and process checklists.
+
+- **Docs parity — new `docs/logging.md`, `docs/icons.md`, `docs/common-mistakes.md`.** `logging.md` is now the SSOT for the `dev.log`/`build.log`/`test.log` tee (extracted from build-system.md, which keeps a pointer — mirrors EM's logging.md); `icons.md` documents the one-source-icon → all-sizes generation pipeline + manifest wiring (mirrors EM's icons.md concept); `common-mistakes.md` extracts the canonical anti-pattern list into the repo (BEM already had one). `templating.md`'s H1 normalized `# HTML Templating` → `# Templating` (matches EM/UJM). All indexed in CLAUDE.md → Documentation.
+- **Test coverage convention (docs).** New mirrored "Test coverage" sections in `CLAUDE.md`, `docs/test-framework.md`, `src/defaults/CLAUDE.md`, and `src/defaults/test/README.md` — every feature ships with tests at every layer it has a surface in (logic `build`/`background`, UI `view`, end-to-end `boot`); a layer is skipped only when the feature genuinely has no surface there. Mirrored across EM/BEM/UJM.
+- **Gulp pipeline tees output to `logs/dev.log` / `logs/build.log`.** `src/gulp/main.js` now duplicates all stdout/stderr (ANSI-stripped) to `<projectRoot>/logs/dev.log` on `npm start` and `logs/build.log` on `npm run build` (`BXM_BUILD_MODE=true`), truncated fresh each run — closes the gap with EM's `dev.log` and UJM's `dev.log`/`build.log` tee. Disable with `BXM_LOG_FILE=false`; override the path with `BXM_LOG_FILE=<path>`. See [docs/build-system.md](docs/build-system.md#log-files).
+- **`npx mgr test` tees output to `logs/test.log`.** All test-runner output is now duplicated (ANSI-stripped) to `<projectRoot>/logs/test.log`, truncated fresh on each run — mirrors EM's and BEM's `test.log` pattern (new `src/utils/attach-log-file.js`). Grep the file after a run instead of scrolling terminal scrollback.
+- **Extended test mode standardized on `TEST_EXTENDED_MODE`.** Replaced the old `--integration` / `BXM_TEST_INTEGRATION` flag with the shared, **unprefixed `TEST_EXTENDED_MODE`** env var — the SAME name across BEM/BXM/UJM/EM (canonical name is BEM's). Opt in via `npx mgr test --extended` or `TEST_EXTENDED_MODE=true`; off by default so `npx mgr test` stays fast + offline-safe. The command now prints `Test mode: extended (real external APIs)` / `normal (external APIs skipped)` and a `⚠️` warning when extended, and `process.env.TEST_EXTENDED_MODE` propagates to every spawned test environment (in-process Node runner + Puppeteer's Chromium). Tests gate on `process.env.TEST_EXTENDED_MODE`. New `src/test/utils/extended-mode-warning.js` (SSOT for the warning). See [docs/test-framework.md](docs/test-framework.md).
+
+### Fixed
+
+- **`logs/test.log` now captures the FULL run (createTee tee isolation).** The attach-log-file tee was a single process-wide singleton, so the attach-log-file unit test detached the live test.log tee mid-run and truncated the file to ~9 lines (header only). `src/utils/attach-log-file.js` now wraps its state in a `createTee()` factory (independent, stackable instances) with the production singleton built on top; the build-layer test (`src/test/suites/build/attach-log-file.test.js`) uses its own `attach.createTee()` instance per test, which stacks under the live singleton and restores it cleanly on detach. Mirrors EM's fix.
+
+- **`npx mgr test <target>` now correctly scopes by source.** Previously the positional target was ignored and every run executed all suites (framework + project) regardless of the prefix. The target now selects which test FILES run: `project:` runs project tests only (`project:<path>` to narrow), `mgr:` / `bxm:` / `framework:` run framework tests only (`mgr:` is the universal cross-framework alias; `bxm:` / `framework:` are BXM-specific equivalents), and a bare `<path>` matches both sources by path. The `--filter=<substring>` flag is orthogonal — it matches test NAMES/descriptions within the already-selected files, and composes with the target. See [docs/test-framework.md](docs/test-framework.md).
+
+---
 ## [1.5.0] - 2026-06-02
 
 ### Added

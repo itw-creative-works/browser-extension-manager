@@ -102,6 +102,72 @@ Same pattern EM uses for its desktop apps. Each store does its own review afterw
 
 Safari (Apple) uses a different extension model and requires Xcode-based packaging via `safari-web-extension-converter`. Not currently in scope for BXM's auto-publish. Manual conversion + App Store Connect upload is the route.
 
+## Store listing description (`config/description.md`)
+
+`config/description.md` is the Chrome Web Store listing description. When writing or rewriting it, first read `config/browser-extension-manager.json` (brand), `config/messages.json` (extension name + short description), `src/manifest.json` (permissions/features), and the component JS under `src/assets/js/components/` to understand what the extension actually does — be specific about real features, not generic copy.
+
+**Format:**
+
+```
+[emoji] [Key Feature Headline 1]
+[emoji] [Key Feature Headline 2]
+[emoji] [Key Feature Headline 3]
+[emoji] [Key Feature Headline 4]
+[emoji] [Key Feature Headline 5]
+
+[Extension Name] is [compelling one-sentence pitch]. [Pain point 1]. [Pain point 2]. [Pain point 3].
+If you [target audience description] — [Extension Name] was made for you.
+
+[emoji] How it works
+[Extension Name] [brief mechanism description].
+
+[emoji] [Feature 1]: [One-line description]
+[emoji] [Feature 2]: [One-line description]
+[emoji] [Feature 3]: [One-line description]
+[emoji] [Feature 4]: [One-line description]
+
+[Brief usage instructions — 2-3 sentences].
+No complicated setup. No learning curve. Just [core value proposition].
+
+[emoji] Why [Extension Name] is a game changer
+
+[Benefit 1 title]: [Description].
+[Benefit 2 title]: [Description].
+[Benefit 3 title]: [Description].
+[Benefit 4 title]: [Description].
+[Benefit 5 title]: [Description].
+
+[emoji] The [Extension Name] Difference
+Most people either:
+
+[Alternative 1 that's worse]
+[Alternative 2 that's worse]
+
+[Extension Name] gives you a [better option description].
+[Catchy metaphor with emoji]
+[Closing sentence about who benefits].
+
+[emoji] Install [Extension Name] now and [call to action].
+[Short imperative sentence].
+
+:money_with_wings: Bonus:
+While you're browsing, the extension also finds and applies shopping deals from top partners like Amazon, Capital One, and NordVPN. Get discounts and bonuses without lifting a finger. When you buy through links on our extension, we may earn an affiliate commission.
+
+:locked_with_key: Your privacy is respected — we do not sell or misuse your data. By using our extension, you agree to our terms of service and privacy policy.
+When you buy through links on our extension, we may earn an affiliate commission.
+```
+
+**Rules:**
+
+- **Keep the Bonus section and Privacy section EXACTLY as shown** — do not modify these
+- Use the extension's actual name from `config/messages.json` — do NOT use `{{ brand.name }}` template variables
+- Be specific about features — reference what the code actually does
+- Tone: enthusiastic, conversational, persuasive; emojis for section headers and feature bullets
+- Feature headlines short and punchy (under 50 characters)
+- 300-500 words (excluding the Bonus and Privacy sections)
+
+**After rewriting**, clear stale cached translations — delete `.cache/translations/description/` and the `description` key from `.cache/translate.json` — then have the user run `npm run build` to regenerate translations (see [translations.md](translations.md)).
+
 ## See also
 
 - [build-system.md](build-system.md) — packaging pipeline that produces the per-browser zips

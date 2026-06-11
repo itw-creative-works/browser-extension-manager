@@ -11,12 +11,78 @@ npx bxm test --layer background       # only background-layer suites (real MV3 S
 npx bxm test --layer view             # only view-layer suites (popup/options/sidepanel)
 npx bxm test --layer boot             # only boot-layer suites (real consumer extension)
 npx bxm test --filter "messaging"     # only suites/tests whose name contains "messaging"
-npx bxm test --integration            # run integration suites against REAL external services (Firebase, etc.) — normal mode skips them in-source, never mocks them
+npx bxm test --extended               # run extended suites against REAL external services (Firebase, etc.) — normal mode skips them in-source, never mocks them
+TEST_EXTENDED_MODE=true npx bxm test  # same as --extended (the shared, unprefixed env var across BEM/BXM/UJM/EM)
 npx bxm test --reporter json          # pretty output + machine-readable {"event":"summary",...} line
 BXM_TEST_DEBUG=1 npx bxm test         # see Chromium/SW stderr (otherwise drained silently)
 ```
 
 In BXM itself, `npm test` does the same.
+
+All test output is also teed (ANSI-stripped) to `<projectRoot>/logs/test.log`, truncated fresh on each run — same pattern as EM's `test.log` and BEM's `test.log`. Grep it after a run instead of scrolling terminal output.
+
+### Selecting which tests run
+
+`npx mgr test` takes two independent selectors that compose:
+
+1. **The positional target** selects which test **files** run, by source + path.
+2. **`--filter=<substring>`** matches test **names/descriptions** within the already-selected files.
+
+#### Positional target — select files by source + path
+
+```bash
+# Everything — framework + project suites
+npx mgr test
+
+# ONLY project tests (all of them)
+npx mgr test project:
+
+# Only project tests matching a path
+npx mgr test project:custom-test
+
+# ONLY framework tests (mgr: is the universal cross-framework alias)
+npx mgr test mgr:
+
+# ONLY framework tests (BXM-specific aliases — equivalent to mgr:)
+npx mgr test bxm:
+npx mgr test framework:
+
+# Framework tests matching a path
+npx mgr test mgr:build/config
+npx mgr test bxm:build/config
+
+# Bare path (no prefix) — BOTH sources, matched by path
+npx mgr test build/config
+```
+
+The source prefix is standardized across all four OMEGA frameworks:
+
+| Target | Selects |
+|---|---|
+| *(none)* | Everything — framework + project suites |
+| `project:` | ONLY project tests (all of them) |
+| `project:<path>` | Only project tests matching `<path>` |
+| `mgr:` | ONLY framework tests (`mgr:` is the universal alias for "the manager's own tests") |
+| `bxm:` / `framework:` | ONLY framework tests (BXM-specific aliases, equivalent to `mgr:`) |
+| `mgr:<path>` / `bxm:<path>` | Framework tests matching `<path>` |
+| `<path>` (bare) | BOTH sources, matched by `<path>` |
+
+A source-prefixed target excludes the other source entirely; the path part (if any) matches by relative path prefix (relative to each source's `test/` root).
+
+#### `--filter` — match test names/descriptions
+
+`--filter` is **orthogonal** to the positional target: it matches a substring against test **names/descriptions** within the files the target already selected. They compose.
+
+```bash
+# All suites, but only tests whose name contains "messaging"
+npx mgr test --filter "messaging"
+
+# Project files only, then only tests named "*storage*" within them
+npx mgr test project: --filter "storage"
+
+# Combine the target with extended mode
+TEST_EXTENDED_MODE=true npx mgr test build/config
+```
 
 ## Layers
 
@@ -38,11 +104,22 @@ Every layer hands your test the **real** runtime, never a hand-rolled fake:
 
 ### Real external APIs are GATED, NOT mocked
 
-Tests that hit a real external service (Firebase, push, any network call) live in **integration suites** and are gated behind `npx bxm test --integration`:
+Tests that hit a real external service (Firebase, push, any network call) live in **extended suites** and are gated behind extended mode (`npx bxm test --extended` or `TEST_EXTENDED_MODE=true`):
 
-- **Normal mode** (`npx bxm test`) **SKIPS** these calls **in-source** — guard them with `ctx.skip(reason)` (or an early return) so the test no-ops when `--integration` is absent. The external API is **skipped in-source, NOT mocked.** Never stand up a fake Firebase / fake fetch to make a normal-mode run go green.
-- **Integration mode** (`npx bxm test --integration`) runs the same code against the **real** service.
-- **Anything an integration test creates externally MUST be cleaned up by the test** — delete the doc/user/record it created (use the suite/group `cleanup: async (ctx) => { ... }` hook, which runs after the last test). Leave no residue in the real backend.
+- **Normal mode** (`npx bxm test`) **SKIPS** these calls **in-source** — guard them with `ctx.skip(reason)` (or an early return) so the test no-ops when extended mode is off. The external API is **skipped in-source, NOT mocked.** Never stand up a fake Firebase / fake fetch to make a normal-mode run go green.
+- **Extended mode** (`npx bxm test --extended`) runs the same code against the **real** service.
+- **Anything an extended test creates externally MUST be cleaned up by the test** — delete the doc/user/record it created (use the suite/group `cleanup: async (ctx) => { ... }` hook, which runs after the last test). Leave no residue in the real backend.
+
+### Extended mode (`TEST_EXTENDED_MODE`)
+
+Extended mode is the opt-in for tests that hit REAL external services (Firebase via web-manager, push, any network call from the background SW / popup / content scripts) instead of skipping them.
+
+- **Skipped by default.** `npx bxm test` runs fast and offline-safe — external calls no-op in-source.
+- **Opt in** with `npx mgr test --extended` (CLI shorthand) or `TEST_EXTENDED_MODE=true npx mgr test` (env var). `TEST_EXTENDED_MODE=1` is also accepted.
+- **Shared, unprefixed name across BEM/BXM/UJM/EM.** All four OMEGA frameworks read the SAME `TEST_EXTENDED_MODE` env var (the canonical name is BEM's) — no `BXM_`-prefixed variant.
+- **Propagates to every spawned test environment.** The command sets `process.env.TEST_EXTENDED_MODE = 'true'`, which is visible to the in-process Node runner and inherited by Puppeteer's Chromium (background / view / boot layers) since `puppeteer.launch()` inherits `process.env`.
+- **The warning prints.** When on, the command logs `Test mode: extended (real external APIs)` plus a `⚠️` banner (teed to `logs/test.log`); when off it logs `normal (external APIs skipped)`.
+- **Tests gate on `process.env.TEST_EXTENDED_MODE`.** Guard external-service tests with `if (process.env.TEST_EXTENDED_MODE !== 'true') ctx.skip('extended mode off');` (or an early return) so they no-op in normal mode.
 
 ### The ONLY two exceptions where a narrow stub is allowed
 
@@ -52,6 +129,18 @@ Mock **nothing** by default. There are exactly two cases where the real dependen
 2. **A real dependency the test environment can't provide.** When the real object only exists from infra you can't stand up in a `build`-layer unit test, a unit test may hand a minimal stub to verify a narrow side effect — but a real-harness layer (`background`/`view`/`boot`) MUST still cover the wired path where one exists.
 
 If you can run it for real, you must. These exceptions are not a license to unit-test in isolation when a real-harness layer would work.
+
+## Test coverage — every surface gets a test (HARD RULE)
+
+A feature is not done when it works — it's done when every surface it exposes is covered in the layer that owns that surface:
+
+| Coverage | Layer | Proves |
+|---|---|---|
+| **Logic** | `build` / `background` | The feature's functions do the right thing when called directly (real Manager, real `chrome.*`, real storage/messaging) |
+| **UI** | `view` | The feature's interface is WIRED — a real event on the real DOM triggers the behavior and the visible result appears |
+| **End-to-end** | `boot` | The feature survives in the consumer's actual packaged extension (extend the boot suite's `inspect` assertions) |
+
+**Skipping a layer is the exception, not the default.** A layer may be skipped ONLY when the feature genuinely has no surface there — a pure build-time utility has no UI; a CSS-only tweak has no logic to call. Convenience is never a reason: "the logic test already covers it" does NOT excuse the UI test — logic tests prove the logic, UI tests prove the wiring (a button can come unhooked while every logic test stays green), boot tests prove the packaging. When in doubt, write the test.
 
 ## `BXM_TEST_MODE=true` — the canonical "we're in tests" signal
 

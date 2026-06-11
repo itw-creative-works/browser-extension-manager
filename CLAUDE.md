@@ -8,7 +8,7 @@ Browser Extension Manager (BXM) is a comprehensive framework for building modern
 
 ## Recommended skills
 
-- **`BXM:patterns`** — SSOT for Browser Extension Manager component architecture, build system, and development patterns. Auto-loads on BXM-specific keywords (`manifest.json`, `extension popup`, `extension background`, `offscreen document`, `chrome extension`, etc.) and when touching files in `src/assets/js/components/`, `src/views/`, `src/assets/css/components/`, `config/browser-extension-manager.json`.
+- **`omega:bxm`** — router skill. Auto-loads on BXM-specific keywords (`manifest.json`, `extension popup`, `extension background`, `offscreen document`, `chrome extension`, etc.) and points back to this CLAUDE.md + `docs/` (the SSOT), carrying only Claude-workflow hard rules and process checklists.
 - **`js:patterns`** — JavaScript/Node.js conventions: file structure, JSDoc, defensive coding (`?.` usage), template literals, `package.json` conventions. Auto-loads when creating new `.js` files or touching JS module structure.
 
 ## 🚨 READ WEB-MANAGER TOO
@@ -29,10 +29,13 @@ Browser Extension Manager (BXM) is a comprehensive framework for building modern
 4. `npm run build` — production build (compiles `dist/`, packages per-browser into `packaged/<browser>/raw/` + `.zip`)
 5. `BXM_IS_PUBLISH=true npm run build` — also uploads to Chrome / Firefox / Edge stores (see [docs/publishing.md](docs/publishing.md))
 6. `npx bxm test` — runs framework + project test suites
-   - `npx mgr test build/config` — run a specific test by path (relative to `test/`)
+   - `npx mgr test build/config` — bare path: run tests matching a path in BOTH sources
+   - `npx mgr test project:` — run ONLY consumer project tests (`project:<path>` to narrow)
+   - `npx mgr test mgr:` — run ONLY framework tests (`mgr:` is the universal cross-framework alias; `bxm:` / `framework:` are equivalent)
    - `npx mgr test bxm:build/config` — run only framework tests matching a path
-   - `npx mgr test project:custom-test` — run only consumer project tests matching a path
-   - Prefix with `TEST_EXTENDED_MODE=true` for tests that hit real external APIs
+   - The positional target selects which test FILES run (by source + path); `--filter=<substring>` is orthogonal — it matches test NAMES within them
+   - Output is teed (ANSI-stripped) to `<projectRoot>/logs/test.log`, truncated fresh each run — `cat logs/test.log` instead of scrolling scrollback
+   - Extended mode (off by default): `npx mgr test --extended` or `TEST_EXTENDED_MODE=true npx mgr test` opts into tests that hit REAL external services (Firebase via web-manager, push, network). `TEST_EXTENDED_MODE` is the shared, unprefixed name across BEM/BXM/UJM/EM; it propagates to every spawned test environment
 
 To load the unpacked extension in Chrome: point chrome://extensions → "Load unpacked" at `packaged/chromium/raw/`.
 
@@ -40,7 +43,7 @@ To load the unpacked extension in Chrome: point chrome://extensions → "Load un
 
 1. `npm install`
 2. `npm start` — watch + compile `src/` → `dist/` via prepare-package
-3. Test in a consumer project: from inside the consumer, run `npx mgr install dev` to swap BXM to this local repo — required whenever you edit the framework source and want the consumer to pick up the changes (the consumer otherwise keeps its installed `node_modules/browser-extension-manager`). Reverse with `npx mgr install live`.
+3. Test in the **designated test consumer** — `../powertools-browser-extension` is BXM's consumer for validating framework changes end-to-end (exercise any consumer-level flow there freely: builds, tests, packaging, runtime). From inside it, run `npx mgr install dev` to swap BXM to this local repo — required whenever you edit the framework source and want the consumer to pick up the changes (the consumer otherwise keeps its installed `node_modules/browser-extension-manager`). Reverse with `npx mgr install live`.
 4. `npm test` — runs the framework's own suites
 
 ## Architecture
@@ -115,6 +118,7 @@ See [docs/build-system.md](docs/build-system.md).
 - `BXM_IS_PUBLISH=true` — also publish to Chrome / Firefox / Edge stores after packaging
 - `BXM_TEST_MODE=true` — running inside BXM's test framework. Powers `Manager.isTesting()`.
 - `BXM_LIVERELOAD_PORT=35729` — WebSocket port for `serve` task
+- `BXM_LOG_FILE` — override the gulp stdout/stderr tee path, or `false` to disable it
 
 ### Themes
 
@@ -162,9 +166,13 @@ Four layers:
 
 Test files export `{ type, layer, description, tests, cleanup }` with `run` (build/background/view) or `inspect` (boot). Same `ctx.expect` / `state` / `skip` API as EM and BEM. CSP-safe ([docs/test-framework.md](docs/test-framework.md)) — test bodies are inlined as literal async-function expressions at runner build-time, not eval'd inside the SW.
 
-**NEVER mock — test against the real harness.** Every layer gives you the real runtime (real MV3 SW, real Chromium tab + DOM, real packaged extension), so never hand-roll a `mockManager`, fake `chrome`/`browser`, or stubbed context. Only pure functions (zero I/O) are called directly. Real external APIs (Firebase, etc.) are GATED behind `npx bxm test --integration` — normal mode skips them in-source via `ctx.skip`, NOT mocked; integration-mode tests must clean up anything they create externally. See [docs/test-framework.md](docs/test-framework.md).
+**NEVER mock — test against the real harness.** Every layer gives you the real runtime (real MV3 SW, real Chromium tab + DOM, real packaged extension), so never hand-roll a `mockManager`, fake `chrome`/`browser`, or stubbed context. Only pure functions (zero I/O) are called directly. Real external APIs (Firebase, etc.) are GATED behind extended mode (`npx mgr test --extended` or `TEST_EXTENDED_MODE=true`) — normal mode skips them in-source via `ctx.skip(process.env.TEST_EXTENDED_MODE)`, NOT mocked; extended-mode tests must clean up anything they create externally. See [docs/test-framework.md](docs/test-framework.md).
 
 See [docs/test-framework.md](docs/test-framework.md) and [docs/test-boot-layer.md](docs/test-boot-layer.md).
+
+### Test coverage
+
+Every feature ships with tests at EVERY layer it has a surface in — logic (`build`/`background`), UI (`view` — real events on the real DOM), and end-to-end (`boot`). Skip a layer ONLY when the feature genuinely has no surface there (a pure build utility has no UI; a CSS-only tweak has no logic). "The logic test already covers it" is NOT a reason to skip the UI test — logic tests prove the logic, UI tests prove the wiring, boot tests prove the built artifact. See [docs/test-framework.md](docs/test-framework.md).
 
 ## CLI
 
@@ -188,7 +196,8 @@ See [docs/cli.md](docs/cli.md).
 
 ## Development Workflow
 
-- **🚫 NEVER run `npm start` / `npm run build` / `npm test`** unless the user explicitly asks. Assume the user is already running the dev server or build watcher. Running these commands kills the user's process and wastes time. Instead, **check output logs** after editing files to confirm changes compiled and took effect.
+- **🚫 NEVER run `npm start`** — it's the user's long-running dev watcher. Assume it's already running; if it isn't, **instruct the user to run it** rather than running it yourself (running it again kills theirs). To see output, **read the `logs/*.log` files** (`dev.log`, `build.log`, `test.log`) — never tail/attach to the process. Running `npx mgr test` is fine.
+- **Where the output logs live:** the gulp pipeline tees all stdout/stderr to `<projectRoot>/logs/dev.log` (on `npm start`) or `logs/build.log` (on `npm run build`), truncated fresh each run, ANSI-stripped. `cat logs/dev.log` (or `grep` it) instead of scrolling scrollback. `npx mgr test` writes `logs/test.log`. See [docs/build-system.md](docs/build-system.md#log-files).
 - **After editing files**, verify the gulp watcher recompiled successfully. Check for webpack/sass errors in the console output. A change that breaks the build is not a completed change.
 - **Live-test UI changes via CDP.** After code changes compile, use the `chrome-devtools` MCP tools (screenshots, click, evaluate JS, console logs) to verify the change works in the running browser. This is the primary way to confirm UI changes — type-checking and test suites verify code correctness, not feature correctness. See `~/.claude/mcp-server/servers/chrome-devtools/CLAUDE.md`.
 
@@ -220,26 +229,31 @@ Don't ship behavioral changes with stale docs. Validate first, then document —
 API references for each subsystem live in `docs/`:
 
 ### Architecture
-- [docs/components.md](docs/components.md) — seven component contexts, three-part structure (view + styles + script)
+- [docs/components.md](docs/components.md) — seven component contexts, three-part structure (view + styles + script), manifest wiring
 - [docs/managers.md](docs/managers.md) — one-line bootstrap per context, import paths, `initialize()` flow
 - [docs/environment-detection.md](docs/environment-detection.md) — `Manager.isTesting / isDevelopment / isProduction / getVersion`
 
 ### Runtime
 - [docs/extension.md](docs/extension.md) — cross-browser `chrome.*` / `browser.*` API wrapper
 - [docs/auth.md](docs/auth.md) — cross-context auth sync, sign-in / load / sign-out flows, button CSS classes
+- [docs/offscreen.md](docs/offscreen.md) — offscreen document lifecycle, creation from background, messaging
+- [docs/xss-prevention.md](docs/xss-prevention.md) — escapeHTML/sanitizeURL canonical forms, extension attack vectors
 
 ### Build
 - [docs/build-system.md](docs/build-system.md) — gulp pipeline, webpack, sass, html, packaging
 - [docs/templating.md](docs/templating.md) — `{{ }}` token replacement, available vars, page template
 - [docs/css.md](docs/css.md) — SCSS load paths, framework + theme + project resolution
 - [docs/themes.md](docs/themes.md) — bootstrap / classy / `_template`, variable overrides, dark mode
+- [docs/icons.md](docs/icons.md) — one source icon → all generated sizes, manifest wiring
 - [docs/defaults.md](docs/defaults.md) — `src/defaults/` system, `FILE_MAP` rules
 - [docs/hooks.md](docs/hooks.md) — `build:pre` / `build:post` lifecycle hooks
 - [docs/translations.md](docs/translations.md) — Claude CLI auto-translate to 16 languages
 
 ### Operations
 - [docs/cli.md](docs/cli.md) — commands, aliases, env var conventions
-- [docs/publishing.md](docs/publishing.md) — Chrome / Firefox / Edge store auto-publishing, credentials, CI
+- [docs/logging.md](docs/logging.md) — `dev.log` / `build.log` / `test.log` tee, controls
+- [docs/common-mistakes.md](docs/common-mistakes.md) — the canonical "don't do this" list
+- [docs/publishing.md](docs/publishing.md) — Chrome / Firefox / Edge store auto-publishing, credentials, CI, store listing description format (`config/description.md`)
 
 ### Testing
 - [docs/test-framework.md](docs/test-framework.md) — writing tests, four layers, `ctx` + `expect` API

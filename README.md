@@ -61,10 +61,13 @@ BXM ships a built-in four-layer test framework. Write tests under `test/<layer>/
 npx bxm test                   # all layers
 npx bxm test --layer build     # build layer only (plain Node, fast)
 npx bxm test --layer boot      # real-Chromium end-to-end test
-npx bxm test --integration     # also run integration suites against REAL external services (Firebase, etc.)
+npx bxm test project:          # ONLY your project's tests (mgr: → only framework tests)
+npx bxm test --extended        # also run extended suites against REAL external services (Firebase, etc.)
 ```
 
-Tests run against the **real** harness — a real MV3 service worker, a real Chromium tab, the real packaged extension. **Never mock** (`chrome`, the Manager, contexts are all real); only pure, I/O-free functions are called directly. Real external APIs are gated behind `--integration` (skipped in-source otherwise, never mocked).
+Tests run against the **real** harness — a real MV3 service worker, a real Chromium tab, the real packaged extension. **Never mock** (`chrome`, the Manager, contexts are all real); only pure, I/O-free functions are called directly. Real external APIs are gated behind **extended mode** — `--extended` or the shared, unprefixed `TEST_EXTENDED_MODE=true` env var (skipped in-source otherwise, never mocked).
+
+All CLI output also lands in `logs/` (ANSI-stripped, truncated each run) — `test.log` from `npx bxm test`, `dev.log` from `npm start`, `build.log` from `npm run build`. Details: [docs/logging.md](docs/logging.md).
 
 Test files use Jest-compatible matchers:
 
