@@ -253,6 +253,7 @@ API references for each subsystem live in `docs/`:
 - [docs/cli.md](docs/cli.md) — commands, aliases, env var conventions
 - [docs/logging.md](docs/logging.md) — `dev.log` / `build.log` / `test.log` tee, controls
 - [docs/common-mistakes.md](docs/common-mistakes.md) — the canonical "don't do this" list
+- [docs/audit.md](docs/audit.md) — full-audit check catalog (U-xx universal / BXM-xx / F-xx IDs with severity + scope), protocol + fix loop
 - [docs/publishing.md](docs/publishing.md) — Chrome / Firefox / Edge store auto-publishing, credentials, CI, store listing description format (`config/description.md`)
 
 ### Testing

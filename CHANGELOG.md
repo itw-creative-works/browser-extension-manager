@@ -15,6 +15,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.6.1] - 2026-06-11
+
+### Added
+
+- **`docs/audit.md` — full-audit check catalog (`/omega:bxm audit`).** ID'd, severity-graded checks with scope auto-detect (consumer vs framework via package.json): mirrored universal checks (U-01..U-14 — tests at every layer, XSS escaping, secrets incl. store-publishing credentials, config canon, doc parity, dead code, dep health, …), BXM-specific checks (BXM-01..BXM-06 — `extension.*` wrapper over raw `chrome.*`, fragment views + three-part component structure, service-worker-safe background, justified manifest permissions, store-listing format + translation-cache hygiene, view a11y), and framework-repo checks (F-01..F-04). Findings persist to `.temp/audit/claude-audit.md`; fixes run as a severity-ordered TodoWrite loop ending with a green `npx mgr test`. Wired to the `omega:bxm` router's Audit process; `docs/audit.md` is mirrored across UJM/BEM/EM. Indexed in CLAUDE.md.
+
+### Changed
+
+- **package.json `keywords` corrected** — replaced the stale template keywords (`Jekyll`, `imagemin`, `Browsersync`, `Autoprefixer`, `PostCSS` — none used by BXM) with accurate ones (`browser-extension`, `chrome-extension`, `firefox-extension`, `edge-extension`, `web-extension`, `manifest-v3`, plus the genuinely-used `gulp`/`sass`/`webpack`). npm-listing metadata only; no behavior change. Mirrored across UJM/BEM/EM.
+
+---
 ## [1.6.0] - 2026-06-11
 
 ### Changed

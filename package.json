@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -59,14 +59,15 @@
     "url": "https://github.com/itw-creative-works/browser-extension-manager.git"
   },
   "keywords": [
-    "Autoprefixer",
-    "Browsersync",
+    "browser-extension",
+    "chrome-extension",
+    "firefox-extension",
+    "edge-extension",
+    "web-extension",
+    "manifest-v3",
     "gulp",
-    "imagemin",
-    "Jekyll",
-    "PostCSS",
-    "Sass",
-    "Webpack"
+    "sass",
+    "webpack"
   ],
   "author": "ITW Creative Works",
   "license": "MIT",
