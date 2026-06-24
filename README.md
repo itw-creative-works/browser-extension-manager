@@ -167,6 +167,10 @@ Add these CSS classes to HTML elements for declarative auth UI:
 
 Full guide: [docs/auth.md](docs/auth.md).
 
+## 🔒 Supply-chain security
+
+All `npm install` calls in BXM CLI commands (`npx bxm setup`, `npx bxm install`) route through [Socket Firewall](https://socket.dev/) when installed — blocking confirmed malware at the network level before packages reach disk. Falls back to plain npm if sfw isn't available. Consumer CI workflows (`publish.yml` default) install sfw globally and run `sfw npm install`.
+
 ## 📚 Documentation
 
 In-depth docs for every subsystem live in [docs/](docs/). See [CLAUDE.md](CLAUDE.md) for the architecture overview + table of contents.

@@ -6,6 +6,7 @@ const path = require('path');
 const jetpack = require('fs-jetpack');
 const version = require('wonderful-version');
 const { execute, template, force } = require('node-powertools');
+const { safeInstall } = require('../lib/safe-install');
 const NPM = require('npm-api');
 const glob = require('glob').globSync;
 const { minimatch } = require('minimatch');
@@ -212,7 +213,7 @@ function install(package, ver, location) {
   logger.log('Installing:', command);
 
   // Execute
-  return execute(command, { log: true })
+  return safeInstall(command)
   .then(async () => {
     // Read new project
     const projectUpdated = jetpack.read(path.join(process.cwd(), 'package.json'), 'json');

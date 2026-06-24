@@ -2,6 +2,8 @@
 
 > **Note for contributors and Claude:** This file is the architectural overview — identity, top-level conventions, and a map to deep references. The **meat** (per-subsystem APIs, edge cases, behavior tables, defaults lists) lives in `docs/<topic>.md`. When extending or adding content, write it in the matching `docs/*.md` file and cross-link from here — do NOT inline it. If a topic doesn't have a doc yet, create one. Goal: keep this file under 250 lines.
 
+> **Mirrored structure:** BEM, UJM, BXM, and EM CLAUDE.md files mirror each other — shared sections (Supply-Chain Security, Development Workflow, File Conventions, etc.) appear in the **same order at the same position** across all four. When adding a section that applies to multiple frameworks, insert it in the same spot in all of them.
+
 ## Identity
 
 Browser Extension Manager (BXM) is a comprehensive framework for building modern cross-browser extensions (Chrome, Firefox, Edge, Opera, Brave). Sister project to Electron Manager (EM) and Ultimate Jekyll Manager (UJM). Provides one-line-import bootstrap per extension context, a component-based architecture, a multi-browser build/release pipeline, auto-translation across 16 languages, cross-context auth synchronization, and a built-in four-layer test framework.
@@ -201,6 +203,10 @@ See [docs/cli.md](docs/cli.md).
 - **After editing files**, verify the gulp watcher recompiled successfully. Check for webpack/sass errors in the console output. A change that breaks the build is not a completed change.
 - **Live-test UI changes via CDP.** After code changes compile, use the `chrome-devtools` MCP tools (screenshots, click, evaluate JS, console logs) to verify the change works in the running browser. This is the primary way to confirm UI changes — type-checking and test suites verify code correctness, not feature correctness. See `~/.claude/mcp-server/servers/chrome-devtools/CLAUDE.md`.
 
+## Supply-Chain Security
+
+All `npm install` calls in CLI commands (`npx mgr i`, `npx mgr setup`) route through the `safeInstall()` helper (`src/lib/safe-install.js`). It prefixes `sfw` (Socket Firewall) when installed — blocking confirmed malware at the network level before packages reach disk. Falls back to plain npm if sfw isn't available. CI workflows install sfw globally and run `sfw npm install`. Installs will **fail if sfw detects confirmed malware** in any package in the dependency tree; non-critical CVEs and quality warnings pass through.
+
 ## File Conventions
 
 - **CommonJS** (`require()`) for build-time + Node code (gulp, CLI, tests). **ES modules** (`import`/`export default class`) for browser-context Manager files (`background.js`, `popup.js`, etc.) — they go through webpack/Babel.
@@ -251,6 +257,7 @@ API references for each subsystem live in `docs/`:
 
 ### Operations
 - [docs/cli.md](docs/cli.md) — commands, aliases, env var conventions
+- [docs/cdp-debugging.md](docs/cdp-debugging.md) — launching a controllable Chrome (CDP), loading the unpacked extension (persistent agent profile — `--load-extension` is dead on stable Chrome), driving via MCP/CDP
 - [docs/logging.md](docs/logging.md) — `dev.log` / `build.log` / `test.log` tee, controls
 - [docs/common-mistakes.md](docs/common-mistakes.md) — the canonical "don't do this" list
 - [docs/audit.md](docs/audit.md) — full-audit check catalog (U-xx universal / BXM-xx / F-xx IDs with severity + scope), protocol + fix loop

@@ -15,6 +15,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Security` in case of vulnerabilities.
 
 ---
+## [1.7.0] - 2026-06-23
+
+### Added
+
+- **Supply-chain security via Socket Firewall.** New `src/lib/safe-install.js` exports `safeInstall()` — a wrapper that detects `sfw` (Socket Firewall) on the system and prefixes install commands with it, blocking confirmed malware at the network level before packages reach disk. Falls back to plain npm when sfw is unavailable. `install.js` and `setup.js` CLI commands now route through `safeInstall()` instead of raw `execute()`. Consumer CI default (`src/defaults/.github/workflows/publish.yml`) now installs sfw globally and runs `sfw npm install`.
+- **`docs/cdp-debugging.md` — launching a controllable browser (mirrored across UJM/BEM/BXM/EM).** The canonical Chrome launch for agents and humans: CDP port + REQUIRED dedicated `--user-data-dir` (Chrome 136+ silently ignores the debug port on the default profile — verified on 149), the persistent agent profile, the shared-instance model (CDP is multi-client), safe quit by profile match, and driving via the `chrome-devtools` MCP. BXM flavor: `--load-extension` is dead on stable Chrome — load unpacked once via `chrome://extensions` in the persistent agent profile.
+- **npm tarball expanded** — `files` field now includes `bin/`, `docs/`, and `CLAUDE.md` alongside `dist/`. Consumers get the full docs and CLI binary in their `node_modules/`.
+- **CLAUDE.md updates** — mirrored-structure note (shared across BEM/UJM/BXM/EM) and Supply-Chain Security section documenting the `safeInstall` pattern.
+
+---
 ## [1.6.1] - 2026-06-11
 
 ### Added

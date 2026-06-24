@@ -1,6 +1,6 @@
 {
   "name": "browser-extension-manager",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Browser Extension Manager dependency manager",
   "main": "dist/index.js",
   "exports": {
@@ -34,7 +34,10 @@
     "mgr": "bin/browser-extension-manager"
   },
   "files": [
-    "dist"
+    "dist/",
+    "bin/",
+    "docs/",
+    "CLAUDE.md"
   ],
   "preparePackage": {
     "input": "./src",
